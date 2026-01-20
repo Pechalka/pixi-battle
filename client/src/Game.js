@@ -1,0 +1,606 @@
+
+
+// game/Game.js
+import * as PIXI from 'pixi.js';
+import { AssetLoader } from './utils/AssetLoader.js';
+import { CollisionSystem } from './utils/CollisionSystem.js';
+import { Tank } from './entities/Tank.js';
+import { Obstacle } from './entities/Obstacle.js';
+
+
+const MAP_CONFIG = {
+    tileSize: 16,       // Удвоенный размер тайла
+    mapWidth: 26,       // Ширина в тайлах (416px)
+    mapHeight: 26,
+    
+    // Координаты кирпичей [gridX, gridY] (в клетках, не пикселях!)
+    bricks: [
+        [2, 2], [2, 3], [2, 4], [2, 5], [2, 6], [2, 7], [2, 8],
+        [3, 2], [3, 3], [3, 4], [3, 5], [3, 6], [3, 7], [3, 8],
+
+        [6, 2], [6, 3], [6, 4], [6, 5], [6, 6], [6, 7], [6, 8],
+        [7, 2], [7, 3], [7, 4], [7, 5], [7, 6], [7, 7], [7, 8],
+
+        [10, 2], [10, 3], [10, 4], [10, 5], [10, 6], [10, 7], [10, 8],
+        [11, 2], [11, 3], [11, 4], [11, 5], [11, 6], [11, 7], [11, 8],
+        // [14, 3], [14, 4], [14, 5], [14, 6], [14, 7], [14, 8], [14, 9],
+        // [15, 3], [15, 4], [15, 5], [15, 6], [15, 7], [15, 8], [15, 9],
+
+        // [18, 3], [18, 4], [18, 5], [18, 6], [18, 7], [18, 8], [18, 9],
+        // [19, 3], [19, 4], [19, 5], [19, 6], [19, 7], [19, 8], [19, 9],
+
+        // [22, 3], [22, 4], [22, 5], [22, 6], [22, 7], [22, 8], [22, 9],
+        // [23, 3], [23, 4], [23, 5], [23, 6], [23, 7], [23, 8], [23, 9],
+
+        // верхние секции
+        // [3, 3], [3, 5], [3, 5], [3, 7], [3, 9],
+
+        // [7, 3], [7, 5], [7, 5], [7, 7], [7, 9],
+
+        // [11, 3], [11, 5], [11, 5], [11, 7], [11, 9],
+
+        // [15, 3], [15, 5], [15, 5], [15, 7], [15, 9],
+
+        // [19, 3], [19, 5], [19, 5], [19, 7], [19, 9],
+
+        // [23, 3], [23, 5], [23, 5], [23, 7], [23, 9],
+
+
+        // [12, 25] //орел
+    ],
+    
+    // Координаты стальных стен
+    steels: [
+        [ 12, 6], [ 13, 6]
+
+        // Стальной блок
+        // [18, 5], [19, 5], [18, 6], [19, 6],
+        // // Стальная стена
+        // [22, 8], [22, 9], [22, 10]
+    ],
+    
+    // Позиция игрока [gridX, gridY] (левая верхняя клетка танка 2×2)
+    playerStart: [9, 25]
+};
+
+export class Game {
+    constructor(canvasElement) {
+        this.canvas = canvasElement;
+        this.app = null;
+        this.playerTank = null;
+        this.bullets = [];
+        this.obstacles = []; // Массив препятствий
+        this.mapGrid = null; // Сетка карты для быстрого доступа
+
+        this.keysPressed = {};
+        this.textures = {};
+
+        this.mapConfig = MAP_CONFIG;
+
+        this.gameBounds = { 
+            x: 0, y: 0, 
+            width: this.mapConfig.mapWidth * this.mapConfig.tileSize,
+            height: this.mapConfig.mapHeight * this.mapConfig.tileSize
+        };
+        this.score = 0;
+
+
+        this.init();
+    }
+    
+    async init() {
+        console.log('Инициализация игры...');
+        
+        try {
+            // 1. Создаём приложение PixiJS
+            this.app = new PIXI.Application();
+            
+            await this.app.init({
+                canvas: this.canvas,
+                width: this.gameBounds.width,
+                height: this.gameBounds.height,
+                backgroundColor: 0x000000,
+                resolution: 1,
+            });
+            
+            console.log('PixiJS инициализирован');
+            
+            // 2. Загружаем ресурсы
+            this.textures = await AssetLoader.loadAssets();
+            
+            // 3. Инициализируем сетку карты
+            this.initMapGrid();
+            
+            // 4. Создаём игровые объекты
+            this.createGame();
+            
+            // 5. Настраиваем управление
+            this.setupControls();
+            
+            // 6. Запускаем игровой цикл
+            this.startGameLoop();
+
+        } catch (error) {
+            console.error('Ошибка инициализации игры:', error);
+        }
+    }
+    
+    // Инициализация сетки карты
+    initMapGrid() {
+        const { mapWidth, mapHeight } = this.mapConfig;
+        this.mapGrid = Array(mapHeight).fill().map(
+            () => Array(mapWidth).fill(null)
+        );
+    }
+    
+    createGame() {
+        // Создаём карту
+        this.createMap();
+        
+        // Создаём танк игрока
+        this.createPlayer();
+    }
+    
+    createMap() {
+
+        // Сетка для отладки
+        this.createDebugGrid();
+
+        // Создаём границы карты (стальные стены)
+        // this.createMapBorders();
+        
+        // Создаём препятствия по конфигурации
+        this.createObstacles();
+        
+        // // Дополнительные препятствия для тестирования
+        // this.createTestObstacles();
+
+
+    }
+
+createDebugGrid() {    
+    const grid = new PIXI.Graphics();
+    
+    // 1. Тестовый квадрат
+    grid.rect(0, 0, this.gameBounds.width, this.gameBounds.height);
+    grid.fill(0x00FF00);
+    
+    // 2. Красная рамка
+    grid.rect(0, 0, this.gameBounds.width, this.gameBounds.height);
+    grid.stroke({
+        width: 2,
+        color: 0xFF0000,
+        alpha: 1
+    });
+    
+    // 3. Сетка - используем setStrokeStyle перед рисованием
+    const { tileSize } = this.mapConfig;
+    
+    // Устанавливаем стиль для сетки
+    grid.setStrokeStyle({
+        width: 1,
+        color: 0x333333,
+        alpha: 0.3
+    });
+    
+    // Рисуем вертикальные линии
+    for (let x = 0; x <= this.gameBounds.width; x += tileSize) {
+        grid.moveTo(x, 0);
+        grid.lineTo(x, this.gameBounds.height);
+    }
+    
+    // Рисуем горизонтальные линии
+    for (let y = 0; y <= this.gameBounds.height; y += tileSize) {
+        grid.moveTo(0, y);
+        grid.lineTo(this.gameBounds.width, y);
+    }
+    
+    // Завершаем stroke
+    grid.stroke();
+    
+    this.app.stage.addChild(grid);
+}
+    createMapBorders() {
+        const { tileSize, mapWidth, mapHeight } = this.mapConfig;
+        
+        // Верхняя и нижняя границы
+        for (let x = 0; x < mapWidth; x++) {
+            // Верх
+            this.addObstacle('steel', x * tileSize, 0);
+            // Низ
+            this.addObstacle('steel', x * tileSize, (mapHeight - 1) * tileSize);
+        }
+        
+        // Левая и правая границы
+        for (let y = 1; y < mapHeight - 1; y++) {
+            // Лево
+            this.addObstacle('steel', 0, y * tileSize);
+            // Право
+            this.addObstacle('steel', (mapWidth - 1) * tileSize, y * tileSize);
+        }
+    }
+
+    createObstacles() {
+        const { tileSize, bricks, steels } = this.mapConfig;
+        
+        // Создаём кирпичные стены из конфигурации
+        bricks.forEach(([gridX, gridY]) => {
+            this.addObstacle('brick', gridX * tileSize, gridY * tileSize);
+        });
+        
+        // Создаём стальные стены из конфигурации
+        steels.forEach(([gridX, gridY]) => {
+            this.addObstacle('steel', gridX * tileSize, gridY * tileSize);
+        });
+    }
+
+    createTestObstacles() {
+        const { tileSize } = this.mapConfig;
+        
+        // Пример: создаём стену из кирпичей для теста
+        for (let i = 2; i < 8; i++) {
+            this.addObstacle('brick', i * tileSize, 5 * tileSize);
+        }
+        
+        // Пример: создаём стальную стену
+        for (let i = 2; i < 8; i++) {
+            this.addObstacle('steel', i * tileSize, 8 * tileSize);
+        }
+        
+        // Пример: создаём кирпичный лабиринт
+        const maze = [
+            [10, 3], [11, 3], [12, 3],
+            [10, 4], [12, 4],
+            [10, 5], [11, 5], [12, 5]
+        ];
+        
+        maze.forEach(([gridX, gridY]) => {
+            this.addObstacle('brick', gridX * tileSize, gridY * tileSize);
+        });
+    }
+
+    addObstacle(type, x, y) {
+        const { tileSize, mapWidth, mapHeight } = this.mapConfig;
+        
+        // Проверяем, что координаты в пределах карты
+        const gridX = Math.floor(x / tileSize);
+        const gridY = Math.floor(y / tileSize);
+        
+        if (gridX < 0 || gridX >= mapWidth || gridY < 0 || gridY >= mapHeight) {
+            console.warn(`Недопустимые координаты препятствия: ${x}, ${y}`);
+            return null;
+        }
+        
+        // Проверяем, не занята ли уже эта ячейка
+        if (this.mapGrid[gridY][gridX]) {
+            console.warn(`Ячейка ${gridX}, ${gridY} уже занята`);
+            return null;
+        }
+        
+        let obstacle;
+        switch(type) {
+            case 'brick':
+                obstacle = new Obstacle(this.textures.brick, this.textures.explosionSmall, x, y, 'brick', tileSize);
+                obstacle.health = 1; // Кирпич разрушается с одного попадания
+                break;
+            case 'steel':
+                obstacle = new Obstacle(this.textures.steel, this.textures.explosionSmall, x, y, 'steel', tileSize);
+                obstacle.health = 999; // Сталь практически неуничтожима
+                break;
+            default:
+                return null;
+        }
+        
+        // Записываем в сетку карты
+        this.mapGrid[gridY][gridX] = {
+            obstacle: obstacle,
+            type: type
+        };
+        
+        this.obstacles.push(obstacle);
+        this.app.stage.addChild(obstacle.sprite);
+        
+        return obstacle;
+    }
+
+    // Удаление препятствия из сетки
+    removeObstacleFromGrid(x, y) {
+        const { tileSize } = this.mapConfig;
+        const gridX = Math.floor(x / tileSize);
+        const gridY = Math.floor(y / tileSize);
+        
+        if (gridX >= 0 && gridX < this.mapGrid[0].length && 
+            gridY >= 0 && gridY < this.mapGrid.length) {
+            this.mapGrid[gridY][gridX] = null;
+            return true;
+        }
+        return false;
+    }
+
+    // Получение препятствия по координатам
+    getObstacleAt(x, y) {
+        const { tileSize } = this.mapConfig;
+        const gridX = Math.floor(x / tileSize);
+        const gridY = Math.floor(y / tileSize);
+        
+        if (gridX >= 0 && gridX < this.mapGrid[0].length && 
+            gridY >= 0 && gridY < this.mapGrid.length) {
+            const cell = this.mapGrid[gridY][gridX];
+            return cell ? cell.obstacle : null;
+        }
+        return null;
+    }
+
+    createPlayer() {
+        const { tileSize, playerStart } = this.mapConfig;
+
+        const [x, y] = playerStart;
+
+        // Ставим игрока в безопасное место (рядом с низом)
+        this.playerTank = new Tank(this.textures.playerTank, 
+                                  x * tileSize, 
+                                  y * tileSize, 
+                                  true);
+        this.app.stage.addChild(this.playerTank.sprite);
+    }
+    
+    setupControls() {
+        const keydownHandler = (e) => {
+            this.keysPressed[e.key.toLowerCase()] = true;
+            
+            if (e.key === ' ') {
+                this.playerShoot();
+            }
+        };
+        
+        const keyupHandler = (e) => {
+            this.keysPressed[e.key.toLowerCase()] = false;
+        };
+        
+        window.addEventListener('keydown', keydownHandler);
+        window.addEventListener('keyup', keyupHandler);
+        
+        // Сохраняем ссылки для удаления
+        this.keydownHandler = keydownHandler;
+        this.keyupHandler = keyupHandler;
+    }
+    
+    playerShoot() {
+        if (!this.playerTank || this.playerTank.isDestroyed) return;
+        
+        const bullet = this.playerTank.shoot(this.textures.bullet);
+        if (bullet) {
+            this.app.stage.addChild(bullet.sprite);
+            this.bullets.push(bullet);
+        }
+    }
+    
+    startGameLoop() {
+        this.app.ticker.add(() => {
+            this.update();
+        });
+    }
+    
+    update() {
+        if (!this.playerTank || this.playerTank.isDestroyed) {
+            this.gameOver();
+            return;
+        }
+        
+        // Обновляем игрока
+        this.updatePlayer();
+        
+        // Обновляем снаряды
+        this.updateBullets();
+    }
+    
+    updatePlayer() {
+        let moved = false;
+        
+        if (this.keysPressed['w'] || this.keysPressed['arrowup']) {
+            moved = this.playerTank.move('up', this.obstacles.filter(o => !o.canDriveThrough));
+        }
+        if (this.keysPressed['s'] || this.keysPressed['arrowdown']) {
+            moved = this.playerTank.move('down', this.obstacles.filter(o => !o.canDriveThrough));
+        }
+        if (this.keysPressed['a'] || this.keysPressed['arrowleft']) {
+            moved = this.playerTank.move('left', this.obstacles.filter(o => !o.canDriveThrough));
+        }
+        if (this.keysPressed['d'] || this.keysPressed['arrowright']) {
+            moved = this.playerTank.move('right', this.obstacles.filter(o => !o.canDriveThrough));
+        }
+        
+        // Проверяем границы экрана
+        const boundsCheck = CollisionSystem.checkBoundaryCollision(
+            this.playerTank.sprite, 
+            this.gameBounds
+        );
+        
+        if (boundsCheck.left || boundsCheck.right || boundsCheck.top || boundsCheck.bottom) {
+            // Отталкиваем от границы
+            if (boundsCheck.left) this.playerTank.sprite.x = this.gameBounds.x + this.playerTank.sprite.width * this.playerTank.sprite.anchor.x;
+            if (boundsCheck.right) this.playerTank.sprite.x = this.gameBounds.width - this.playerTank.sprite.width * (1 - this.playerTank.sprite.anchor.x);
+            if (boundsCheck.top) this.playerTank.sprite.y = this.gameBounds.y + this.playerTank.sprite.height * this.playerTank.sprite.anchor.y;
+            if (boundsCheck.bottom) this.playerTank.sprite.y = this.gameBounds.height - this.playerTank.sprite.height * (1 - this.playerTank.sprite.anchor.y);
+            
+            this.playerTank.updateHitbox();
+        }
+    }
+
+updateBullets() {
+    for (let i = this.bullets.length - 1; i >= 0; i--) {
+        const bullet = this.bullets[i];
+        
+        // КРИТИЧНО: проверяем существует ли пуля и её спрайт
+        if (!bullet || !bullet.sprite || bullet.isDestroyed) {
+            this.bullets.splice(i, 1);
+            continue;
+        }
+        
+        // Проверяем что спрайт ещё прикреплён к сцене
+        if (!bullet.sprite.parent) {
+            this.bullets.splice(i, 1);
+            continue;
+        }
+
+        // Двигаем снаряд
+        switch(bullet.direction) {
+            case 'up': bullet.sprite.y -= bullet.speed; break;
+            case 'down': bullet.sprite.y += bullet.speed; break;
+            case 'left': bullet.sprite.x -= bullet.speed; break;
+            case 'right': bullet.sprite.x += bullet.speed; break;
+        }
+        
+        // ВАЖНО: Проверяем коллизии ДО проверки границ!
+        // Если пуля попала во что-то, она удаляется в checkBulletObstacleCollision
+        const hitSomething = this.checkBulletObstacleCollision(bullet, i);
+        
+        // Если пуля ещё существует (не попала в препятствие), проверяем границы
+        if (!hitSomething && i < this.bullets.length && this.bullets[i] === bullet) {
+            this.checkBulletBoundaries(bullet, i);
+        }
+    }
+}
+
+checkBulletObstacleCollision(bullet, bulletIndex) {
+    const bulletX = bullet.sprite.x;
+    const bulletY = bullet.sprite.y;
+    const { tileSize } = this.mapConfig;
+    
+    // 1. Определяем центральную клетку попадания
+    const centerGridX = Math.floor(bulletX / tileSize);
+    const centerGridY = Math.floor(bulletY / tileSize);
+    
+    // 2. Определяем смещение внутри клетки (0-31)
+    const offsetX = bulletX % tileSize;
+    const offsetY = bulletY % tileSize;
+    
+    // 3. Какие клетки разрушать в зависимости от направления
+    const cellsToDestroy = [];
+    
+    switch(bullet.direction) {
+        case 'up':
+        case 'down':
+            // Вертикальный выстрел - разрушает 2 клетки по горизонтали
+            cellsToDestroy.push({x: centerGridX, y: centerGridY});
+            cellsToDestroy.push({x: centerGridX + 1, y: centerGridY});
+            break;
+            
+        case 'left':
+        case 'right':
+            // Горизонтальный выстрел - разрушает 2 клетки по вертикали
+            cellsToDestroy.push({x: centerGridX, y: centerGridY});
+            cellsToDestroy.push({x: centerGridX, y: centerGridY + 1});
+            break;
+    }
+    
+    // 4. Фильтруем клетки вне карты
+    const validCells = cellsToDestroy.filter(({x, y}) => 
+        x >= 0 && x < this.mapGrid[0].length && 
+        y >= 0 && y < this.mapGrid.length
+    );
+    
+    let hitSomething = false;
+    
+    // 5. Разрушаем кирпичи в этих клетках
+    for (const {x, y} of validCells) {
+        // Получаем препятствие из сетки
+        let obstacle = null;
+        if (y >= 0 && y < this.mapGrid.length && 
+            x >= 0 && x < this.mapGrid[0].length) {
+            const cell = this.mapGrid[y][x];
+            obstacle = cell ? cell.obstacle : null;
+        }
+        
+        if (!obstacle || obstacle.isDestroyed) continue;
+        
+        if (obstacle.type === 'steel') {
+            // Пуля уничтожается о сталь
+            this.removeBullet(bullet, bulletIndex);
+            return true;
+        }
+        
+        // Для кирпича - разрушаем
+        const destroyed = obstacle.takeDamage(1);
+        
+        if (destroyed) {
+            // Удаляем из сетки карты
+            this.mapGrid[y][x] = null;
+            
+            // Удаляем из массива препятствий
+            const obstacleIndex = this.obstacles.indexOf(obstacle);
+            if (obstacleIndex !== -1) {
+                this.obstacles.splice(obstacleIndex, 1);
+            }
+            
+            hitSomething = true;
+        }
+    }
+    
+    if (hitSomething) {
+        this.removeBullet(bullet, bulletIndex);
+        return true;
+    }
+    
+    return false;
+}
+
+    checkBulletBoundaries(bullet, bulletIndex) {
+        // Удаляем снаряд за границами
+        if (bullet.sprite.x < -50 || bullet.sprite.x > this.gameBounds.width + 50 || 
+            bullet.sprite.y < -50 || bullet.sprite.y > this.gameBounds.height + 50) {
+            this.removeBullet(bullet, bulletIndex);
+        }
+    }
+
+    removeBullet(bullet, index) {
+        if (bullet.sprite && bullet.sprite.parent) {
+            this.app.stage.removeChild(bullet.sprite);
+        }
+        
+        if (index < this.bullets.length && this.bullets[index] === bullet) {
+            this.bullets.splice(index, 1);
+        }
+    }
+
+    gameOver() {
+        console.log('Игра окончена! Счёт:', this.score);
+        
+        // Экран Game Over
+        const gameOverText = new PIXI.Text({
+            text: `GAME OVER\nScore: ${this.score}`,
+            style: {
+                fill: 0xFF0000,
+                fontSize: 48,
+                align: 'center'
+            }
+        });
+        
+        gameOverText.anchor.set(0.5);
+        gameOverText.x = this.gameBounds.width / 2;
+        gameOverText.y = this.gameBounds.height / 2;
+        
+        this.app.stage.addChild(gameOverText);
+        
+        // Останавливаем игру
+        this.app.ticker.stop();
+    }
+    
+    destroy() {
+        if (this.app) {
+            this.app.destroy(true, {
+                children: true,
+                texture: true,
+                baseTexture: true,
+            });
+        }
+        
+        if (this.keydownHandler) {
+            window.removeEventListener('keydown', this.keydownHandler);
+        }
+        
+        if (this.keyupHandler) {
+            window.removeEventListener('keyup', this.keyupHandler);
+        }
+    }
+}
