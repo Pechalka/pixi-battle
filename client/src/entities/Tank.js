@@ -48,72 +48,131 @@ export class Tank {
         };
     }
     
-    move(direction, obstacles = []) {
-        const prevX = this.sprite.x;
-        const prevY = this.sprite.y;
+move(direction, obstacles = []) {
+    const prevX = this.sprite.x;
+    const prevY = this.sprite.y;
+    const prevDirection = this.direction;
 
-        this.direction = direction;
-        
-        switch(direction) {
-            case 'up':
-                this.sprite.y -= this.speed;
-                this.sprite.rotation = 0;
-                break;
-            case 'down':
-                this.sprite.y += this.speed;
-                this.sprite.rotation = Math.PI;
-                break;
-            case 'left':
-                this.sprite.x -= this.speed;
-                this.sprite.rotation = -Math.PI / 2;
-                break;
-            case 'right':
-                this.sprite.x += this.speed;
-                this.sprite.rotation = Math.PI / 2;
-                break;
+    if (prevDirection != direction) {
+        if (direction === 'up' || direction === 'down') {
+            // Ближайший центр пары клеток
+            this.sprite.x = Math.round(this.sprite.x / 16) * 16;
+        } 
+        // Для горизонтального движения (влево/вправо) - центрируем по Y
+        else {
+            this.sprite.y = Math.round(this.sprite.y / 16) * 16;
         }
+    }
 
-        // Обновляем хитбокс
-        this.updateHitbox();
-        
-        // Проверяем столкновения с препятствиями
-        let collision = false;
-        
-        for (const obstacle of obstacles) {
-            // Проверяем, есть ли у препятствия хитбокс
-            let obstacleBounds;
-            
-            if (obstacle.hitbox) {
-                // Если у препятствия есть свойство hitbox
-                obstacleBounds = obstacle.hitbox;
-            } else if (obstacle.getBounds && typeof obstacle.getBounds === 'function') {
-                // Если у препятствия есть метод getBounds()
-                obstacleBounds = obstacle.getBounds();
-            } else if (obstacle.sprite) {
-                // Если это спрайт Pixi (используем getBounds())
-                obstacleBounds = obstacle.sprite.getBounds();
-            } else {
-                // Если это простой объект с координатами
-                obstacleBounds = obstacle;
-            }
-            
-            if (CollisionSystem.checkRectCollision(this.hitbox, obstacleBounds)) {
-                collision = true;
-                break;
-            }
-        }
-        
-        // Если есть столкновение - возвращаем на предыдущую позицию
-        if (collision) {
-            this.sprite.x = prevX;
-            this.sprite.y = prevY;
-            this.updateHitbox();
-            return false; // Движение не удалось
-        }
-        
-        return true; // Движение успешно
+//     if (prevDirection != direction) {
+//         if (prevDirection === 'up' || prevDirection == 'down') {
+//             const pairIndex = Math.floor(this.sprite.y / 32);
+//             this.sprite.y = pairIndex * 32  + 16;
+
+//         } else {
+//             const pairIndex = Math.floor(this.sprite.x / 32); // 32 = 2 клетки
+//             const offsetX = direction === 'up'
+//             this.sprite.x = pairIndex * 32 + 16; // +16, а не +8!
+
+//         }
+//     }
+
+// if (direction === 'up' || direction === 'down') {
+//     // Центрируем по X
+//     // Нужно попасть в: 16, 48, 80, 112... (каждые 32px + 16)
+//     const pairIndex = Math.floor(this.sprite.x / 32); // 32 = 2 клетки
+//     this.sprite.x = pairIndex * 32 + 16; // +16, а не +8!
+// } else {
+//     // Центрируем по Y
+//     const pairIndex = Math.floor(this.sprite.y / 32);
+//     this.sprite.y = pairIndex * 32  + 16;
+// }
+
+// if (prevDirection != this.direction) {
+//         if (prevDirection === 'left') {
+//             // Ехал влево → центрируем в следующую пару по X
+//             this.sprite.x = Math.ceil(this.sprite.x / 32) * 32 - 16;
+//         } 
+//         else if (prevDirection === 'right') {
+//             // Ехал вправо → центрируем в текущую пару по X  
+//             this.sprite.x = Math.floor(this.sprite.x / 32) * 32 + 16;
+//         }
+
+//         // Для поворота из вертикального в горизонтальное:
+//         if (prevDirection === 'up') {
+//             // Ехал вверх → центрируем в следующую пару по Y
+//             this.sprite.y = Math.ceil(this.sprite.y / 32) * 32 - 16;
+//         }
+//         else if (prevDirection === 'down') {
+//             // Ехал вниз → центрируем в текущую пару по Y
+//             this.sprite.y = Math.floor(this.sprite.y / 32) * 32 + 16;
+//         }
+//     }
+    
+    this.direction = direction;
+    
+    // Пробуем движение
+    switch(direction) {
+        case 'up':
+            this.sprite.y -= this.speed;
+            this.sprite.rotation = 0;
+            break;
+        case 'down':
+            this.sprite.y += this.speed;
+            this.sprite.rotation = Math.PI;
+            break;
+        case 'left':
+            this.sprite.x -= this.speed;
+            this.sprite.rotation = -Math.PI / 2;
+            break;
+        case 'right':
+            this.sprite.x += this.speed;
+            this.sprite.rotation = Math.PI / 2;
+            break;
     }
     
+    this.updateHitbox();
+    
+    // Проверяем коллизии
+    let collision = false;
+    for (const obstacle of obstacles) {
+        let obstacleBounds = this.getObstacleBounds(obstacle);
+        if (CollisionSystem.checkRectCollision(this.hitbox, obstacleBounds)) {
+            collision = true;
+            break;
+        }
+    }
+    
+    if (collision) {
+        // Возвращаем на предыдущую позицию
+        this.sprite.x = prevX;
+        this.sprite.y = prevY;
+        // this.direction = prevDirection;
+        this.updateRotation();
+        this.updateHitbox();
+        return false;
+    }
+    
+    return true;
+}
+
+
+
+updateRotation() {
+    switch(this.direction) {
+        case 'up': this.sprite.rotation = 0; break;
+        case 'down': this.sprite.rotation = Math.PI; break;
+        case 'left': this.sprite.rotation = -Math.PI / 2; break;
+        case 'right': this.sprite.rotation = Math.PI / 2; break;
+    }
+}
+
+getObstacleBounds(obstacle) {
+    if (obstacle.hitbox) return obstacle.hitbox;
+    if (obstacle.getBounds) return obstacle.getBounds();
+    if (obstacle.sprite) return obstacle.sprite.getBounds();
+    return obstacle;
+}
     // Проверка столкновения с другим танком
     checkTankCollision(otherTank) {
         if (this.isDestroyed || otherTank.isDestroyed) return false;

@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState } from "react";
+import { useRef, useEffect, useState, StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 
 import { Game } from "./Game.js";
@@ -40,11 +40,11 @@ export const GameCanvas = () => {
             
             if (gameRef.current) {
                 gameRef.current.destroy();
-                gameRef.current = null;
             }
         };
         
-    }, [gameRef]);
+    }, []);
+
 
     return (
         <div style={{ position: 'relative' }}>
@@ -90,4 +90,4 @@ const App = () => {
 };
 
 // Временное отключение StrictMode для теста
-createRoot(document.getElementById("root")).render(<App />);
+createRoot(document.getElementById("root")).render(  <App />);
