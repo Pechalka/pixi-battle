@@ -159,6 +159,6 @@ export class Obstacle {
                 this.sprite.parent.removeChild(this.sprite);
                 this.sprite.destroy();
             }
-        }, 300);
+        }, 100);
     }
 }
