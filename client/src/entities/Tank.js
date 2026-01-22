@@ -3,7 +3,7 @@ import * as PIXI from 'pixi.js';
 import { CollisionSystem } from '../utils/CollisionSystem.js';
 
 export class Tank {
-    constructor(texture, x = 100, y = 100, isPlayer = true) {
+constructor(texture, x = 100, y = 100, isPlayer = true) {
         this.sprite = new PIXI.Sprite(texture);
         this.sprite.x = x;
         this.sprite.y = y;
@@ -35,6 +35,12 @@ export class Tank {
         this.shootTimer = null;
         this.blinkTimer = null;
         this.destroyTimer = null;
+        
+        // Анимация
+        this.animationFrame = 1;
+        this.animationTimer = null;
+        this.isMoving = false;
+        this.textures = {}; // Будет заполнен извне
     }
 
     // Обновляем хитбокс при движении
@@ -109,25 +115,33 @@ move(direction, obstacles = []) {
 //         }
 //     }
     
-    this.direction = direction;
+this.direction = direction;
+    
+    // Запускаем анимацию движения
+    if (!this.isMoving) {
+        this.startAnimation();
+    }
+    
+    // Обновляем спрайт в зависимости от направления
+    this.updateSpriteByDirection();
     
     // Пробуем движение
     switch(direction) {
         case 'up':
             this.sprite.y -= this.speed;
-            this.sprite.rotation = 0;
+            // this.sprite.rotation = 0;
             break;
         case 'down':
             this.sprite.y += this.speed;
-            this.sprite.rotation = Math.PI;
+            // this.sprite.rotation = Math.PI;
             break;
         case 'left':
             this.sprite.x -= this.speed;
-            this.sprite.rotation = -Math.PI / 2;
+            // this.sprite.rotation = -Math.PI / 2;
             break;
         case 'right':
             this.sprite.x += this.speed;
-            this.sprite.rotation = Math.PI / 2;
+            // this.sprite.rotation = Math.PI / 2;
             break;
     }
     
@@ -326,6 +340,58 @@ getObstacleBounds(obstacle) {
         this.hitbox = null;
     }
     
+// Установка текстур для анимации
+    setTextures(textures) {
+        this.textures = textures;
+    }
+    
+    // Запуск анимации
+    startAnimation() {
+        this.isMoving = true;
+        this.animate();
+    }
+    
+    // Остановка анимации
+    stopAnimation() {
+        this.isMoving = false;
+        if (this.animationTimer) {
+            clearTimeout(this.animationTimer);
+            this.animationTimer = null;
+        }
+    }
+    
+    // Анимация танка
+    animate() {
+        if (!this.isMoving || this.isDestroyed) return;
+        
+        // Переключаем кадр анимации
+        this.animationFrame = this.animationFrame === 1 ? 2 : 1;
+        
+        // Обновляем спрайт в зависимости от направления
+        this.updateSpriteByDirection();
+        
+        // Запускаем следующий кадр через 10 мс
+        this.animationTimer = setTimeout(() => {
+            this.animate();
+        }, 150);
+    }
+    
+    // Обновление спрайта в зависимости от направления
+    updateSpriteByDirection() {
+        if (!this.textures || Object.keys(this.textures).length === 0) return;
+        
+        const textureKey = `playerTank${this.capitalizeFirst(this.direction)}${this.animationFrame}`;
+        
+        if (this.textures[textureKey]) {
+            this.sprite.texture = this.textures[textureKey];
+        }
+    }
+    
+    // Вспомогательная функция для капитализации первой буквы
+    capitalizeFirst(str) {
+        return str.charAt(0).toUpperCase() + str.slice(1);
+    }
+    
     // Очистка таймеров
     clearTimers() {
         if (this.shootTimer) {
@@ -341,6 +407,11 @@ getObstacleBounds(obstacle) {
         if (this.destroyTimer) {
             clearTimeout(this.destroyTimer);
             this.destroyTimer = null;
+        }
+        
+        if (this.animationTimer) {
+            clearTimeout(this.animationTimer);
+            this.animationTimer = null;
         }
     }
     

@@ -5,9 +5,19 @@ export class AssetLoader {
         const spritesheet = await PIXI.Assets.load('/sprites.png');
         
         const textures = {
-            // ТАНКИ (16x16 пикселей)
-            playerTank: this.extractTexture(spritesheet, 0, 0, 16, 16),           // Желтый танк игрока 1
-            playerTank2: this.extractTexture(spritesheet, 16, 0, 16, 16),         // Зеленый танк игрока 2
+// ТАНКИ (16x16 пикселей)
+            // Игрок 1 (желтый танк) - анимация
+            playerTankUp1: this.extractTexture(spritesheet, 0, 0, 16, 16),           // Желтый танк вверх 1
+            playerTankUp2: this.extractTexture(spritesheet, 16, 0, 16, 16),          // Желтый танк вверх 2
+            playerTankLeft1: this.extractTexture(spritesheet, 16*2, 0, 16, 16),         // Желтый танк влево 1
+            playerTankLeft2: this.extractTexture(spritesheet, 16*3, 0, 16, 16),         // Желтый танк влево 2
+            playerTankDown1: this.extractTexture(spritesheet, 16*4, 0, 16, 16),      // Желтый танк вниз 1
+            playerTankDown2: this.extractTexture(spritesheet, 16*5, 0, 16, 16),      // Желтый танк вниз 2
+            playerTankRight1: this.extractTexture(spritesheet, 16*6, 0, 16, 16),       // Желтый танк вправо 1
+            playerTankRight2: this.extractTexture(spritesheet, 16*7, 0, 16, 16),       // Желтый танк вправо 2
+
+            playerTank: this.extractTexture(spritesheet, 0, 0, 16, 16),             // Желтый танк по умолчанию
+            playerTank2: this.extractTexture(spritesheet, 16, 0, 16, 16),             // Зеленый танк игрока 2
             enemyTankBasic: this.extractTexture(spritesheet, 16*8, 0, 16, 16),    // Серый базовый враг (строка 1)
             enemyTankFast: this.extractTexture(spritesheet, 16*8, 16, 16, 16),    // Серый быстрый враг (строка 2)
             enemyTankPower: this.extractTexture(spritesheet, 16*8, 16*2, 16, 16), // Серый сильный враг (строка 3)

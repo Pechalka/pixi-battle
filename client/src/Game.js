@@ -159,7 +159,7 @@ export class Game {
     createMap() {
 
         // Сетка для отладки
-        this.createDebugGrid();
+        // this.createDebugGrid();
 
         // Создаём границы карты (стальные стены)
         // this.createMapBorders();
@@ -352,10 +352,14 @@ createDebugGrid() {
         const [x, y] = playerStart;
 
         // Ставим игрока в безопасное место (рядом с низом)
-        this.playerTank = new Tank(this.textures.playerTank, 
+        this.playerTank = new Tank(this.textures.playerTankUp1, 
                                   x * tileSize, 
                                   y * tileSize, 
                                   true);
+        
+        // Устанавливаем текстуры для анимации
+        this.playerTank.setTextures(this.textures);
+        
         this.app.stage.addChild(this.playerTank.sprite);
     }
 
@@ -363,9 +367,9 @@ createDebugGrid() {
         const { tileSize, basePosition } = this.mapConfig;
         const [x, y] = basePosition;
 
-this.base = new Base(this.textures.base, this.textures.brick, x * tileSize, y * tileSize, tileSize);
-        this.base.setDestroyedTexture(this.textures.baseDestroyed);        
-        this.app.stage.addChild(this.base.container);
+        this.base = new Base(this.textures.base, this.textures.brick, x * tileSize, y * tileSize, tileSize);
+                this.base.setDestroyedTexture(this.textures.baseDestroyed);        
+                this.app.stage.addChild(this.base.container);
     }
     
     setupControls() {
@@ -454,6 +458,11 @@ this.base = new Base(this.textures.base, this.textures.brick, x * tileSize, y * 
             if (boundsCheck.bottom) this.playerTank.sprite.y = this.gameBounds.height - this.playerTank.sprite.height * (1 - this.playerTank.sprite.anchor.y);
             
             this.playerTank.updateHitbox();
+        }
+        
+        // Если танк не двигался в этом кадре, останавливаем анимацию
+        if (!moved && this.playerTank.isMoving) {
+            this.playerTank.stopAnimation();
         }
     }
 
