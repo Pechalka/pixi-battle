@@ -7,6 +7,9 @@ export class Base {
         this.container.x = x;
         this.container.y = y;
 
+        this.eagleTexture = eagleTexture;
+        this.wallTexture = wallTexture;
+
         this.spriteEagle = new PIXI.Sprite(eagleTexture);
         this.spriteEagle.anchor.set(0.5);
         this.spriteEagle.position.set(0, 0);
@@ -22,6 +25,7 @@ export class Base {
         
         this.health = 1; // Орёл уничтожается с одного попадания
         this.isDestroyed = false;
+        this.canDriveThrough = false; // Нельзя проезжать через базу
         
         // Создаём хитбокс для орла (отдельно от стен)
         this.updateEagleHitbox();
@@ -97,6 +101,44 @@ export class Base {
         return this.bricks.filter(brick => !brick.isDestroyed);
     }
     
+    getBounds() {
+        // Возвращаем объединённые границы всех кирпичей и орла
+        if (this.isDestroyed) return null;
+        
+        const activeBricks = this.getBricks();
+        if (activeBricks.length === 0) {
+            // Если кирпичей нет, возвращаем границы орла
+            return this.getEagleBounds();
+        }
+        
+        // Вычисляем общие границы всех кирпичей
+        let minX = Infinity, minY = Infinity;
+        let maxX = -Infinity, maxY = -Infinity;
+        
+        // Добавляем границы орла
+        const eagleBounds = this.getEagleBounds();
+        minX = Math.min(minX, eagleBounds.x);
+        minY = Math.min(minY, eagleBounds.y);
+        maxX = Math.max(maxX, eagleBounds.x + eagleBounds.width);
+        maxY = Math.max(maxY, eagleBounds.y + eagleBounds.height);
+        
+        // Добавляем границы каждого кирпича
+        for (const brick of activeBricks) {
+            const brickGlobalBounds = this.container.toGlobal(new PIXI.Point(brick.x, brick.y));
+            minX = Math.min(minX, brickGlobalBounds.x);
+            minY = Math.min(minY, brickGlobalBounds.y);
+            maxX = Math.max(maxX, brickGlobalBounds.x + brick.width);
+            maxY = Math.max(maxY, brickGlobalBounds.y + brick.height);
+        }
+        
+        return {
+            x: minX,
+            y: minY,
+            width: maxX - minX,
+            height: maxY - minY
+        };
+    }
+    
     takeDamage(damage) {
         this.health -= damage;
         
@@ -156,10 +198,21 @@ export class Base {
     
     destroy() {
         this.isDestroyed = true;
+        this.canDriveThrough = true; // Теперь можно проезжать через уничтоженную базу
         
-        // Удаляем контейнер со сцены
-        if (this.container.parent) {
-            this.container.parent.removeChild(this.container);
+        // Заменяем орла на уничтоженную базу
+        this.spriteEagle.texture = this.eagleTexture;
+        // Находим текстуру уничтоженной базы из AssetLoader
+        // Это будет установлено извне через метод setDestroyedTexture
+    }
+    
+    setDestroyedTexture(destroyedTexture) {
+        this.destroyedTexture = destroyedTexture;
+    }
+    
+    replaceWithDestroyed() {
+        if (this.destroyedTexture) {
+            this.spriteEagle.texture = this.destroyedTexture;
         }
     }
     

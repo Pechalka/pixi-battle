@@ -64,7 +64,7 @@ const MAP_CONFIG = {
     basePosition: [12, 25],  // Позиция базы [gridX, gridY]
     
     // Позиция игрока [gridX, gridY] (левая верхняя клетка танка 2×2)
-    playerStart: [9, 25]
+    playerStart: [8, 25]
 };
 
 export class Game {
@@ -356,7 +356,8 @@ createDebugGrid() {
         const { tileSize, basePosition } = this.mapConfig;
         const [x, y] = basePosition;
 
-        this.base = new Base(this.textures.base, this.textures.brick, x * tileSize, y * tileSize, tileSize);
+this.base = new Base(this.textures.base, this.textures.brick, x * tileSize, y * tileSize, tileSize);
+        this.base.setDestroyedTexture(this.textures.baseDestroyed);
         console.log('База создана:', this.base);
         
         this.app.stage.addChild(this.base.container);
@@ -574,12 +575,14 @@ if (hitSomething) {
             return true;
         }
         
-        // Затем проверяем попадание в орла
+// Затем проверяем попадание в орла
         if (CollisionSystem.checkBulletCollision(bullet, this.base.spriteEagle)) {
             const destroyed = this.base.takeDamage(1);
             this.removeBullet(bullet, bulletIndex);
             
             if (destroyed) {
+                // Заменяем орла на уничтоженную базу
+                this.base.replaceWithDestroyed();
                 this.gameOver();
             }
             

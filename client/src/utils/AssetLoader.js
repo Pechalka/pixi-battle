@@ -39,7 +39,7 @@ export class AssetLoader {
             
             // БАЗА И ОРУЖИЕ
             base: this.extractTexture(spritesheet, 16*19, 16*2, 16, 16),          // База (орёл)
-            baseDestroyed: this.extractTexture(spritesheet, 16*18, 16*7, 32, 32), // Уничтоженная база
+            baseDestroyed: this.extractTexture(spritesheet, 16*20, 16*2, 16, 16), // Уничтоженная база
             
             // UI ЭЛЕМЕНТЫ (цифры, буквы, символы)
             numbers: this.extractTexture(spritesheet, 16*10, 16*4, 80, 16),       // Цифры 0-9
