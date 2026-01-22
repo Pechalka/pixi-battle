@@ -125,23 +125,23 @@ this.direction = direction;
     // Обновляем спрайт в зависимости от направления
     this.updateSpriteByDirection();
     
-    // Пробуем движение
+// Пробуем движение
     switch(direction) {
         case 'up':
             this.sprite.y -= this.speed;
-            // this.sprite.rotation = 0;
+            this.sprite.rotation = 0; // Убираем поворот для направления вверх
             break;
         case 'down':
             this.sprite.y += this.speed;
-            // this.sprite.rotation = Math.PI;
+            this.sprite.rotation = 0; // Убираем поворот - текстура уже смотрит вниз
             break;
         case 'left':
             this.sprite.x -= this.speed;
-            // this.sprite.rotation = -Math.PI / 2;
+            this.sprite.rotation = 0; // Убираем поворот - текстура уже смотрит влево
             break;
         case 'right':
             this.sprite.x += this.speed;
-            // this.sprite.rotation = Math.PI / 2;
+            this.sprite.rotation = 0; // Убираем поворот - текстура уже смотрит вправо
             break;
     }
     
@@ -376,7 +376,7 @@ getObstacleBounds(obstacle) {
         }, 150);
     }
     
-    // Обновление спрайта в зависимости от направления
+// Обновление спрайта в зависимости от направления
     updateSpriteByDirection() {
         if (!this.textures || Object.keys(this.textures).length === 0) return;
         
@@ -384,8 +384,11 @@ getObstacleBounds(obstacle) {
         
         if (this.textures[textureKey]) {
             this.sprite.texture = this.textures[textureKey];
+        } else {
+            console.warn(`Texture not found: ${textureKey}`);
         }
     }
+    
     
     // Вспомогательная функция для капитализации первой буквы
     capitalizeFirst(str) {
