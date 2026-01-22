@@ -24,6 +24,7 @@ export const GameCanvas = () => {
             try {
                 setStatus('Инициализация игры...');
                 gameRef.current = new Game(canvasRef.current);
+                await gameRef.current.init();
                 setStatus('Игра запущена!');
                 
             } catch (error) {
@@ -44,7 +45,6 @@ export const GameCanvas = () => {
         };
         
     }, []);
-
 
     return (
         <div style={{ position: 'relative' }}>
