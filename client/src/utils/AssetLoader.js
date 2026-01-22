@@ -38,7 +38,7 @@ export class AssetLoader {
             bonusClock: this.extractTexture(spritesheet, 16*15, 16*6, 16, 16),    // Часы (заморозить врагов)
             
             // БАЗА И ОРУЖИЕ
-            base: this.extractTexture(spritesheet, 16*16, 16*7, 32, 32),          // База (орёл)
+            base: this.extractTexture(spritesheet, 16*19, 16*2, 16, 16),          // База (орёл)
             baseDestroyed: this.extractTexture(spritesheet, 16*18, 16*7, 32, 32), // Уничтоженная база
             
             // UI ЭЛЕМЕНТЫ (цифры, буквы, символы)
