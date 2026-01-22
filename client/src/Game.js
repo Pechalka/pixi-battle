@@ -5,6 +5,7 @@ import * as PIXI from 'pixi.js';
 import { AssetLoader } from './utils/AssetLoader.js';
 import { CollisionSystem } from './utils/CollisionSystem.js';
 import { Tank } from './entities/Tank.js';
+import { Base } from './entities/Base.js';
 import { Obstacle } from './entities/Obstacle.js';
 
 
@@ -59,6 +60,8 @@ const MAP_CONFIG = {
         // // Стальная стена
         // [22, 8], [22, 9], [22, 10]
     ],
+
+    basePosition: [12, 25],  // Позиция базы [gridX, gridY]
     
     // Позиция игрока [gridX, gridY] (левая верхняя клетка танка 2×2)
     playerStart: [9, 25]
@@ -75,6 +78,7 @@ export class Game {
 
         this.keysPressed = {};
         this.textures = {};
+        this.base = {};
 
         this.mapConfig = MAP_CONFIG;
 
@@ -85,7 +89,7 @@ export class Game {
         };
         this.score = 0;
 
-
+// console.log('Game constructor');
         this.init();
     }
     
@@ -140,12 +144,15 @@ export class Game {
         
         // Создаём танк игрока
         this.createPlayer();
+
+        // Создаём базу
+        this.createBase();
     }
     
     createMap() {
 
         // Сетка для отладки
-        this.createDebugGrid();
+        // this.createDebugGrid();
 
         // Создаём границы карты (стальные стены)
         // this.createMapBorders();
@@ -344,6 +351,16 @@ createDebugGrid() {
                                   true);
         this.app.stage.addChild(this.playerTank.sprite);
     }
+
+    createBase() {
+        const { tileSize, basePosition } = this.mapConfig;
+        const [x, y] = basePosition;
+
+        this.base = new Base(this.textures.base, this.textures.brick, x * tileSize, y * tileSize, tileSize);
+        console.log('База создана:', this.base);
+        
+        this.app.stage.addChild(this.base.container);
+    }
     
     setupControls() {
         const keydownHandler = (e) => {
@@ -538,8 +555,20 @@ checkBulletObstacleCollision(bullet, bulletIndex) {
         }
     }
     
-    if (hitSomething) {
+if (hitSomething) {
         this.removeBullet(bullet, bulletIndex);
+        return true;
+    }
+    
+    // Проверяем коллизию с базой
+    if (this.base && !this.base.isDestroyed && CollisionSystem.checkBulletCollision(bullet, this.base)) {
+        const destroyed = this.base.takeDamage(1);
+        this.removeBullet(bullet, bulletIndex);
+        
+        if (destroyed) {
+            this.gameOver();
+        }
+        
         return true;
     }
     
@@ -581,23 +610,23 @@ checkBulletObstacleCollision(bullet, bulletIndex) {
         gameOverText.x = this.gameBounds.width / 2;
         gameOverText.y = this.gameBounds.height / 2;
         
+        
         this.app.stage.addChild(gameOverText);
+
         
         // Останавливаем игру
         this.app.ticker.stop();
     }
     
     destroy() {
+        // console.log('destroy Game');
         // if (this.app) {
         //     this.app.destroy(true, {
         //         children: true,
         //         texture: true,
         //         baseTexture: true,
         //     });
-        //     console.log('this.app ', this.app)
         // }
-
-        
         if (this.keydownHandler) {
             window.removeEventListener('keydown', this.keydownHandler);
         }

@@ -14,55 +14,89 @@ export class Base {
         this.spriteEagle.height = 32;
         this.container.addChild(this.spriteEagle);
         
-        // Создаем кирпичную стену толщиной 16 пикселей вокруг орла
-        this.createBrickWalls(wallTexture);
+        // Создаём стену из кирпичей вокруг орла
+        this.createBrickWall(wallTexture, tileSize);
         
         this.health = 3;
         this.isDestroyed = false;
-
-        const bounds = this.container.getLocalBounds();
-        this.container.width = bounds.width * 2;   // 64
-        this.container.height = bounds.height;  
-
-        // this.hitbox = {
-        //     x: this.container.x - this.container.width * this.container.anchor.x,
-        //     y: this.container.y - this.container.height * this.container.anchor.y,
-        //     width: this.container.width,
-        //     height: this.container.height
-        // };
+        
+        // Создаём хитбокс для базы
+        this.updateHitbox();
 
     }
     
-    createBrickWalls(wallTexture) {
-        const wallThickness = 16;
+    createBrickWall(wallTexture, tileSize) {
+        // Размер орла 32x32, создаём стену вокруг него
+        // Стена будет на расстоянии 16 пикселей от орла
         const eagleSize = 32;
+        const wallDistance = 16;
+        const brickSize = 16;
         
+        // Вычисляем границы стены
+        const wallLeft = -(eagleSize / 2) - wallDistance;
+        const wallRight = (eagleSize / 2) + wallDistance;
+        const wallTop = -(eagleSize / 2) - wallDistance;
+        const eagleBottom = (eagleSize / 2);
+        
+        // Создаём кирпичные блоки по периметру
         // Верхняя стена
-        const topWall = new PIXI.Sprite(wallTexture);
-        topWall.width = eagleSize + 2 * wallThickness;
-        topWall.height = wallThickness;
-        topWall.position.set(-eagleSize/2 - wallThickness, -eagleSize/2 - wallThickness);
-        this.container.addChild(topWall);
+        for (let x = wallLeft; x < wallRight; x += brickSize) {
+            this.createBrick(wallTexture, x, wallTop, brickSize);
+        }
         
-        // Нижняя стена
-        // const bottomWall = new PIXI.Sprite(wallTexture);
-        // bottomWall.width = eagleSize + 2 * wallThickness;
-        // bottomWall.height = wallThickness;
-        // bottomWall.position.set(-eagleSize/2 - wallThickness, eagleSize/2);
-        // this.container.addChild(bottomWall);
+        // Левая стена (заканчивается на уровне низа орла)
+        for (let y = wallTop; y < eagleBottom; y += brickSize) {
+            this.createBrick(wallTexture, wallLeft, y, brickSize);
+        }
         
-        // Левая стена
-        const leftWall = new PIXI.Sprite(wallTexture);
-        leftWall.width = wallThickness;
-        leftWall.height = eagleSize;
-        leftWall.position.set(-eagleSize/2 - wallThickness, -eagleSize/2);
-        this.container.addChild(leftWall);
-        
-        // Правая стена
-        const rightWall = new PIXI.Sprite(wallTexture);
-        rightWall.width = wallThickness;
-        rightWall.height = eagleSize;
-        rightWall.position.set(eagleSize/2, -eagleSize/2);
-        this.container.addChild(rightWall);
+        // Правая стена (заканчивается на уровне низа орла)
+        for (let y = wallTop; y < eagleBottom; y += brickSize) {
+            this.createBrick(wallTexture, wallRight - brickSize, y, brickSize);
+        }
     }
+    
+    createBrick(wallTexture, x, y, size) {
+        const brick = new PIXI.Sprite(wallTexture);
+        brick.x = x;
+        brick.y = y;
+        brick.width = size;
+        brick.height = size;
+        this.container.addChild(brick);
+    }
+    
+    updateHitbox() {
+        // Хитбокс для всей базы (включая стены)
+        const bounds = this.container.getBounds();
+        this.hitbox = {
+            x: bounds.x,
+            y: bounds.y,
+            width: bounds.width,
+            height: bounds.height
+        };
+    }
+    
+    getBounds() {
+        return this.hitbox;
+    }
+    
+    takeDamage(damage) {
+        this.health -= damage;
+        
+        if (this.health <= 0) {
+            this.destroy();
+            return true;
+        }
+        
+        return false;
+    }
+    
+    destroy() {
+        this.isDestroyed = true;
+        
+        // Удаляем контейнер со сцены
+        if (this.container.parent) {
+            this.container.parent.removeChild(this.container);
+        }
+    }
+    
 };
