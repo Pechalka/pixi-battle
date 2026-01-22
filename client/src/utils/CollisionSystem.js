@@ -18,10 +18,17 @@ export class CollisionSystem {
         };
     }
     
-    // Проверка столкновения снаряда с объектом
+// Проверка столкновения снаряда с объектом
     static checkBulletCollision(bullet, target) {
-        const bulletBounds = bullet.getBounds();
-        const targetBounds = target.getBounds();
+        const bulletBounds = bullet.sprite.getBounds();
+        
+        let targetBounds;
+        if (target.getBounds) {
+            targetBounds = target.getBounds();
+        } else {
+            // Если это спрайт, получаем его границы напрямую
+            targetBounds = target.getBounds();
+        }
         
         // Для снаряда можно использовать меньший допуск
         return this.checkRectCollision(

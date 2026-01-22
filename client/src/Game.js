@@ -415,17 +415,23 @@ createDebugGrid() {
     updatePlayer() {
         let moved = false;
         
+// Создаём массив препятствий включая базу
+        const allObstacles = [...this.obstacles.filter(o => !o.canDriveThrough)];
+        if (this.base && !this.base.isDestroyed) {
+            allObstacles.push(this.base);
+        }
+        
         if (this.keysPressed['w'] || this.keysPressed['arrowup']) {
-            moved = this.playerTank.move('up', this.obstacles.filter(o => !o.canDriveThrough));
+            moved = this.playerTank.move('up', allObstacles);
         }
         if (this.keysPressed['s'] || this.keysPressed['arrowdown']) {
-            moved = this.playerTank.move('down', this.obstacles.filter(o => !o.canDriveThrough));
+            moved = this.playerTank.move('down', allObstacles);
         }
         if (this.keysPressed['a'] || this.keysPressed['arrowleft']) {
-            moved = this.playerTank.move('left', this.obstacles.filter(o => !o.canDriveThrough));
+            moved = this.playerTank.move('left', allObstacles);
         }
         if (this.keysPressed['d'] || this.keysPressed['arrowright']) {
-            moved = this.playerTank.move('right', this.obstacles.filter(o => !o.canDriveThrough));
+            moved = this.playerTank.move('right', allObstacles);
         }
         
         // Проверяем границы экрана
@@ -561,15 +567,24 @@ if (hitSomething) {
     }
     
     // Проверяем коллизию с базой
-    if (this.base && !this.base.isDestroyed && CollisionSystem.checkBulletCollision(bullet, this.base)) {
-        const destroyed = this.base.takeDamage(1);
-        this.removeBullet(bullet, bulletIndex);
-        
-        if (destroyed) {
-            this.gameOver();
+    if (this.base && !this.base.isDestroyed) {
+        // Сначала проверяем попадание в кирпичи стены
+        if (this.base.checkBrickHit(bullet)) {
+            this.removeBullet(bullet, bulletIndex);
+            return true;
         }
         
-        return true;
+        // Затем проверяем попадание в орла
+        if (CollisionSystem.checkBulletCollision(bullet, this.base.spriteEagle)) {
+            const destroyed = this.base.takeDamage(1);
+            this.removeBullet(bullet, bulletIndex);
+            
+            if (destroyed) {
+                this.gameOver();
+            }
+            
+            return true;
+        }
     }
     
     return false;

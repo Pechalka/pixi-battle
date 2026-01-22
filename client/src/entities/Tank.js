@@ -216,7 +216,11 @@ getObstacleBounds(obstacle) {
             sprite: new PIXI.Sprite(bulletTexture),
             direction: this.direction,
             speed: 8,
-            isDestroyed: false
+            isDestroyed: false,
+            
+            getBounds() {
+                return this.sprite.getBounds();
+            }
         };
         
         // Позиция снаряда в зависимости от направления

@@ -14,14 +14,17 @@ export class Base {
         this.spriteEagle.height = 32;
         this.container.addChild(this.spriteEagle);
         
+        // Массив для хранения кирпичей стены
+        this.bricks = [];
+        
         // Создаём стену из кирпичей вокруг орла
         this.createBrickWall(wallTexture, tileSize);
         
-        this.health = 3;
+        this.health = 1; // Орёл уничтожается с одного попадания
         this.isDestroyed = false;
         
-        // Создаём хитбокс для базы
-        this.updateHitbox();
+        // Создаём хитбокс для орла (отдельно от стен)
+        this.updateEagleHitbox();
 
     }
     
@@ -61,22 +64,37 @@ export class Base {
         brick.y = y;
         brick.width = size;
         brick.height = size;
+        brick.isDestroyed = false;
+        
+        // Добавляем хитбокс для кирпича
+        brick.hitbox = {
+            x: brick.x,
+            y: brick.y,
+            width: brick.width,
+            height: brick.height
+        };
+        
         this.container.addChild(brick);
+        this.bricks.push(brick);
     }
     
-    updateHitbox() {
-        // Хитбокс для всей базы (включая стены)
-        const bounds = this.container.getBounds();
-        this.hitbox = {
-            x: bounds.x,
-            y: bounds.y,
-            width: bounds.width,
-            height: bounds.height
+    updateEagleHitbox() {
+        // Хитбокс только для орла
+        const eagleBounds = this.spriteEagle.getBounds();
+        this.eagleHitbox = {
+            x: eagleBounds.x,
+            y: eagleBounds.y,
+            width: eagleBounds.width,
+            height: eagleBounds.height
         };
     }
     
-    getBounds() {
-        return this.hitbox;
+    getEagleBounds() {
+        return this.eagleHitbox;
+    }
+    
+    getBricks() {
+        return this.bricks.filter(brick => !brick.isDestroyed);
     }
     
     takeDamage(damage) {
@@ -88,6 +106,52 @@ export class Base {
         }
         
         return false;
+    }
+    
+    // Проверка попадания в кирпичи стены
+    checkBrickHit(bullet) {
+        for (let i = 0; i < this.bricks.length; i++) {
+            const brick = this.bricks[i];
+            
+            if (brick.isDestroyed) continue;
+            
+            // Получаем глобальные границы кирпича
+            const brickBounds = this.container.toGlobal(new PIXI.Point(brick.x, brick.y));
+            const globalBrickBounds = {
+                x: brickBounds.x,
+                y: brickBounds.y,
+                width: brick.width,
+                height: brick.height
+            };
+            
+            // Проверяем коллизию пули с кирпичом
+            if (CollisionSystem.checkRectCollision(
+                { x: bullet.sprite.x - 2, y: bullet.sprite.y - 2, width: 4, height: 4 },
+                globalBrickBounds
+            )) {
+                // Уничтожаем кирпич
+                this.destroyBrick(i);
+                return true;
+            }
+        }
+        
+        return false;
+    }
+    
+    // Уничтожение кирпича
+    destroyBrick(index) {
+        const brick = this.bricks[index];
+        if (!brick || brick.isDestroyed) return;
+        
+        brick.isDestroyed = true;
+        
+        // Удаляем спрайт кирпича
+        if (brick.parent) {
+            brick.parent.removeChild(brick);
+        }
+        
+        // Обновляем хитбокс орла (если нужно)
+        this.updateEagleHitbox();
     }
     
     destroy() {
