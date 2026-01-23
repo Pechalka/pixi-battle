@@ -325,8 +325,10 @@ getObstacleBounds(obstacle) {
     
 // Обновление спрайта в зависимости от направления
     updateSpriteByDirection() {
+        console.log(this.textures)
         if (!this.textures || Object.keys(this.textures).length === 0) return;
         
+        console.log('>> ', this.direction)
         const textureKey = `playerTank${this.capitalizeFirst(this.direction)}${this.animationFrame}`;
         
         if (this.textures[textureKey]) {

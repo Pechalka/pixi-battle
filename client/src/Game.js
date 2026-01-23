@@ -309,6 +309,8 @@ export class Game {
         
         enemyPositions.forEach(([x, y]) => {
             const enemy = new Tank(this.textures.playerTankUp1, x * tileSize, y * tileSize, false);
+            enemy.textures = this.textures;
+
             this.enemies.push(enemy);
             this.app.stage.addChild(enemy.sprite);
         });
@@ -324,7 +326,9 @@ export class Game {
                                   x * tileSize, 
                                   y * tileSize, 
                                   true);
-        
+
+        this.playerTank.textures = this.textures;
+
         // Устанавливаем текстуры для анимации
         this.playerTank.setTextures(this.textures);
         
