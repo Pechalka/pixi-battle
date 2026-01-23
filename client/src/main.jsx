@@ -137,8 +137,8 @@ const MapEditor = () => {
         const tileSize = 16;
         
         grid.setStrokeStyle({
-            width: 1,
-            color: 0x333333,
+            width: 2,
+            color: "red",
             alpha: 0.3
         });
         

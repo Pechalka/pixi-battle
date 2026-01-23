@@ -162,23 +162,11 @@ this.direction = direction;
         this.sprite.x = prevX;
         this.sprite.y = prevY;
         // this.direction = prevDirection;
-        this.updateRotation();
         this.updateHitbox();
         return false;
     }
     
     return true;
-}
-
-
-
-updateRotation() {
-    switch(this.direction) {
-        case 'up': this.sprite.rotation = 0; break;
-        case 'down': this.sprite.rotation = Math.PI; break;
-        case 'left': this.sprite.rotation = -Math.PI / 2; break;
-        case 'right': this.sprite.rotation = Math.PI / 2; break;
-    }
 }
 
 getObstacleBounds(obstacle) {
