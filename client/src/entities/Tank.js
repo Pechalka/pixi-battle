@@ -70,52 +70,8 @@ move(direction, obstacles = []) {
         }
     }
 
-//     if (prevDirection != direction) {
-//         if (prevDirection === 'up' || prevDirection == 'down') {
-//             const pairIndex = Math.floor(this.sprite.y / 32);
-//             this.sprite.y = pairIndex * 32  + 16;
-
-//         } else {
-//             const pairIndex = Math.floor(this.sprite.x / 32); // 32 = 2 клетки
-//             const offsetX = direction === 'up'
-//             this.sprite.x = pairIndex * 32 + 16; // +16, а не +8!
-
-//         }
-//     }
-
-// if (direction === 'up' || direction === 'down') {
-//     // Центрируем по X
-//     // Нужно попасть в: 16, 48, 80, 112... (каждые 32px + 16)
-//     const pairIndex = Math.floor(this.sprite.x / 32); // 32 = 2 клетки
-//     this.sprite.x = pairIndex * 32 + 16; // +16, а не +8!
-// } else {
-//     // Центрируем по Y
-//     const pairIndex = Math.floor(this.sprite.y / 32);
-//     this.sprite.y = pairIndex * 32  + 16;
-// }
-
-// if (prevDirection != this.direction) {
-//         if (prevDirection === 'left') {
-//             // Ехал влево → центрируем в следующую пару по X
-//             this.sprite.x = Math.ceil(this.sprite.x / 32) * 32 - 16;
-//         } 
-//         else if (prevDirection === 'right') {
-//             // Ехал вправо → центрируем в текущую пару по X  
-//             this.sprite.x = Math.floor(this.sprite.x / 32) * 32 + 16;
-//         }
-
-//         // Для поворота из вертикального в горизонтальное:
-//         if (prevDirection === 'up') {
-//             // Ехал вверх → центрируем в следующую пару по Y
-//             this.sprite.y = Math.ceil(this.sprite.y / 32) * 32 - 16;
-//         }
-//         else if (prevDirection === 'down') {
-//             // Ехал вниз → центрируем в текущую пару по Y
-//             this.sprite.y = Math.floor(this.sprite.y / 32) * 32 + 16;
-//         }
-//     }
     
-this.direction = direction;
+    this.direction = direction;
     
     // Запускаем анимацию движения
     if (!this.isMoving) {
@@ -217,7 +173,7 @@ getObstacleBounds(obstacle) {
         const bullet = {
             sprite: new PIXI.Sprite(bulletTexture),
             direction: this.direction,
-            speed: 8,
+            speed: 1,
             isDestroyed: false,
             
             getBounds() {
@@ -225,22 +181,24 @@ getObstacleBounds(obstacle) {
             }
         };
         
+
+        // 10 отрицательный сдвиг что бы передний кирпич можно было разругать
         // Позиция снаряда в зависимости от направления
         switch(this.direction) {
             case 'up':
                 bullet.sprite.x = this.sprite.x;
-                bullet.sprite.y = this.sprite.y - this.sprite.height / 2 - 10;
+                bullet.sprite.y = this.sprite.y - this.sprite.height / 2 + 10;
                 break;
             case 'down':
                 bullet.sprite.x = this.sprite.x;
-                bullet.sprite.y = this.sprite.y + this.sprite.height / 2 + 10;
+                bullet.sprite.y = this.sprite.y + this.sprite.height / 2 - 10;
                 break;
             case 'left':
-                bullet.sprite.x = this.sprite.x - this.sprite.width / 2 - 10;
+                bullet.sprite.x = this.sprite.x - this.sprite.width / 2 + 10;
                 bullet.sprite.y = this.sprite.y;
                 break;
             case 'right':
-                bullet.sprite.x = this.sprite.x + this.sprite.width / 2 + 10;
+                bullet.sprite.x = this.sprite.x + this.sprite.width / 2 - 10;
                 bullet.sprite.y = this.sprite.y;
                 break;
         }

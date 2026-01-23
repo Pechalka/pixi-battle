@@ -71,7 +71,7 @@ const MAP_CONFIG = {
     basePosition: [13, 25],  // Позиция базы [gridX, gridY]
     
     // Позиция игрока [gridX, gridY] (левая верхняя клетка танка 2×2)
-    playerStart: [8, 25]
+    playerStart: [9, 25]
 };
 
 export class Game {
@@ -159,81 +159,56 @@ export class Game {
     createMap() {
 
         // Сетка для отладки
-        // this.createDebugGrid();
-
-        // Создаём границы карты (стальные стены)
-        // this.createMapBorders();
+        this.createDebugGrid();
         
         // Создаём препятствия по конфигурации
         this.createObstacles();
         
-        // // Дополнительные препятствия для тестирования
-        // this.createTestObstacles();
-
-
     }
 
-createDebugGrid() {    
-    const grid = new PIXI.Graphics();
-    
-    // 1. Тестовый квадрат
-    grid.rect(0, 0, this.gameBounds.width, this.gameBounds.height);
-    grid.fill(0x00FF00);
-    
-    // 2. Красная рамка
-    grid.rect(0, 0, this.gameBounds.width, this.gameBounds.height);
-    grid.stroke({
-        width: 2,
-        color: 0xFF0000,
-        alpha: 1
-    });
-    
-    // 3. Сетка - используем setStrokeStyle перед рисованием
-    const { tileSize } = this.mapConfig;
-    
-    // Устанавливаем стиль для сетки
-    grid.setStrokeStyle({
-        width: 1,
-        color: 0x333333,
-        alpha: 0.3
-    });
-    
-    // Рисуем вертикальные линии
-    for (let x = 0; x <= this.gameBounds.width; x += tileSize) {
-        grid.moveTo(x, 0);
-        grid.lineTo(x, this.gameBounds.height);
-    }
-    
-    // Рисуем горизонтальные линии
-    for (let y = 0; y <= this.gameBounds.height; y += tileSize) {
-        grid.moveTo(0, y);
-        grid.lineTo(this.gameBounds.width, y);
-    }
-    
-    // Завершаем stroke
-    grid.stroke();
-    
-    this.app.stage.addChild(grid);
-}
-    createMapBorders() {
-        const { tileSize, mapWidth, mapHeight } = this.mapConfig;
+    createDebugGrid() {    
+        const grid = new PIXI.Graphics();
         
-        // Верхняя и нижняя границы
-        for (let x = 0; x < mapWidth; x++) {
-            // Верх
-            this.addObstacle('steel', x * tileSize, 0);
-            // Низ
-            this.addObstacle('steel', x * tileSize, (mapHeight - 1) * tileSize);
+        // 1. Тестовый квадрат
+        grid.rect(0, 0, this.gameBounds.width, this.gameBounds.height);
+        grid.fill(0x00FF00);
+        
+        // 2. Красная рамка
+        grid.rect(0, 0, this.gameBounds.width, this.gameBounds.height);
+        grid.stroke({
+            width: 2,
+            color: 0xFF0000,
+            alpha: 1
+        });
+        
+        // 3. Сетка - используем setStrokeStyle перед рисованием
+        const { tileSize } = this.mapConfig;
+        
+        // Устанавливаем стиль для сетки
+        grid.setStrokeStyle({
+            width: 1,
+            color: 0x333333,
+            alpha: 0.3
+        });
+        
+        // Рисуем вертикальные линии
+        for (let x = 0; x <= this.gameBounds.width; x += tileSize) {
+            grid.moveTo(x, 0);
+            grid.lineTo(x, this.gameBounds.height);
         }
         
-        // Левая и правая границы
-        for (let y = 1; y < mapHeight - 1; y++) {
-            // Лево
-            this.addObstacle('steel', 0, y * tileSize);
-            // Право
-            this.addObstacle('steel', (mapWidth - 1) * tileSize, y * tileSize);
+        // Рисуем горизонтальные линии
+        for (let y = 0; y <= this.gameBounds.height; y += tileSize) {
+            grid.moveTo(0, y);
+            grid.lineTo(this.gameBounds.width, y);
         }
+        
+        // Завершаем stroke
+        grid.stroke();
+        
+        this.app.stage.addChild(grid);
     }
+
 
     createObstacles() {
         const { tileSize, bricks, steels } = this.mapConfig;
@@ -249,31 +224,7 @@ createDebugGrid() {
         });
     }
 
-    createTestObstacles() {
-        const { tileSize } = this.mapConfig;
-        
-        // Пример: создаём стену из кирпичей для теста
-        for (let i = 2; i < 8; i++) {
-            this.addObstacle('brick', i * tileSize, 5 * tileSize);
-        }
-        
-        // Пример: создаём стальную стену
-        for (let i = 2; i < 8; i++) {
-            this.addObstacle('steel', i * tileSize, 8 * tileSize);
-        }
-        
-        // Пример: создаём кирпичный лабиринт
-        const maze = [
-            [10, 3], [11, 3], [12, 3],
-            [10, 4], [12, 4],
-            [10, 5], [11, 5], [12, 5]
-        ];
-        
-        maze.forEach(([gridX, gridY]) => {
-            this.addObstacle('brick', gridX * tileSize, gridY * tileSize);
-        });
-    }
-
+ 
     addObstacle(type, x, y) {
         const { tileSize, mapWidth, mapHeight } = this.mapConfig;
         
@@ -466,40 +417,40 @@ createDebugGrid() {
         }
     }
 
-updateBullets() {
-    for (let i = this.bullets.length - 1; i >= 0; i--) {
-        const bullet = this.bullets[i];
-        
-        // КРИТИЧНО: проверяем существует ли пуля и её спрайт
-        if (!bullet || !bullet.sprite || bullet.isDestroyed) {
-            this.bullets.splice(i, 1);
-            continue;
-        }
-        
-        // Проверяем что спрайт ещё прикреплён к сцене
-        if (!bullet.sprite.parent) {
-            this.bullets.splice(i, 1);
-            continue;
-        }
+    updateBullets() {
+        for (let i = this.bullets.length - 1; i >= 0; i--) {
+            const bullet = this.bullets[i];
+            
+            // КРИТИЧНО: проверяем существует ли пуля и её спрайт
+            if (!bullet || !bullet.sprite || bullet.isDestroyed) {
+                this.bullets.splice(i, 1);
+                continue;
+            }
+            
+            // Проверяем что спрайт ещё прикреплён к сцене
+            if (!bullet.sprite.parent) {
+                this.bullets.splice(i, 1);
+                continue;
+            }
 
-        // Двигаем снаряд
-        switch(bullet.direction) {
-            case 'up': bullet.sprite.y -= bullet.speed; break;
-            case 'down': bullet.sprite.y += bullet.speed; break;
-            case 'left': bullet.sprite.x -= bullet.speed; break;
-            case 'right': bullet.sprite.x += bullet.speed; break;
-        }
-        
-        // ВАЖНО: Проверяем коллизии ДО проверки границ!
-        // Если пуля попала во что-то, она удаляется в checkBulletObstacleCollision
-        const hitSomething = this.checkBulletObstacleCollision(bullet, i);
-        
-        // Если пуля ещё существует (не попала в препятствие), проверяем границы
-        if (!hitSomething && i < this.bullets.length && this.bullets[i] === bullet) {
-            this.checkBulletBoundaries(bullet, i);
+            // Двигаем снаряд
+            switch(bullet.direction) {
+                case 'up': bullet.sprite.y -= bullet.speed; break;
+                case 'down': bullet.sprite.y += bullet.speed; break;
+                case 'left': bullet.sprite.x -= bullet.speed; break;
+                case 'right': bullet.sprite.x += bullet.speed; break;
+            }
+            
+            // ВАЖНО: Проверяем коллизии ДО проверки границ!
+            // Если пуля попала во что-то, она удаляется в checkBulletObstacleCollision
+            const hitSomething = this.checkBulletObstacleCollision(bullet, i);
+            
+            // Если пуля ещё существует (не попала в препятствие), проверяем границы
+            if (!hitSomething && i < this.bullets.length && this.bullets[i] === bullet) {
+                this.checkBulletBoundaries(bullet, i);
+            }
         }
     }
-}
 
 checkBulletObstacleCollision(bullet, bulletIndex) {
     const bulletX = bullet.sprite.x;
@@ -507,8 +458,8 @@ checkBulletObstacleCollision(bullet, bulletIndex) {
     const { tileSize } = this.mapConfig;
     
     // 1. Определяем центральную клетку попадания
-    const centerGridX = Math.floor(bulletX / tileSize);
-    const centerGridY = Math.floor(bulletY / tileSize);
+    const centerGridX = Math.round(bulletX / tileSize);
+    const centerGridY = Math.round(bulletY / tileSize);
     
     // 2. Определяем смещение внутри клетки (0-31)
     const offsetX = bulletX % tileSize;
@@ -541,13 +492,18 @@ checkBulletObstacleCollision(bullet, bulletIndex) {
     
     let hitSomething = false;
     
+    console.log('validCells ', validCells);
+
     // 5. Разрушаем кирпичи в этих клетках
     for (const {x, y} of validCells) {
         // Получаем препятствие из сетки
         let obstacle = null;
         if (y >= 0 && y < this.mapGrid.length && 
-            x >= 0 && x < this.mapGrid[0].length) {
-            const cell = this.mapGrid[y][x];
+            x >= 0 && x < this.mapGrid[0].length ) {
+            let cell = null;
+            if (this.mapGrid[y -1]) {
+                cell = this.mapGrid[y -1][x -1];
+            }
             obstacle = cell ? cell.obstacle : null;
         }
         
@@ -564,7 +520,7 @@ checkBulletObstacleCollision(bullet, bulletIndex) {
         
         if (destroyed) {
             // Удаляем из сетки карты
-            this.mapGrid[y][x] = null;
+            this.mapGrid[y - 1][x - 1] = null;
             
             // Удаляем из массива препятствий
             const obstacleIndex = this.obstacles.indexOf(obstacle);
