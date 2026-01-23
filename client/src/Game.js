@@ -71,7 +71,11 @@ const MAP_CONFIG = {
     basePosition: [13, 25],  // Позиция базы [gridX, gridY]
     
     // Позиция игрока [gridX, gridY] (левая верхняя клетка танка 2×2)
-    playerStart: [9, 25]
+    playerStart: [9, 25],
+
+    enemyPositions: [
+        [1, 1], [13, 1], [25, 1] 
+    ]
 };
 
 export class Game {
@@ -82,6 +86,7 @@ export class Game {
         this.bullets = [];
         this.obstacles = []; // Массив препятствий
         this.mapGrid = null; // Сетка карты для быстрого доступа
+        this.enemies = [];
 
         this.keysPressed = {};
         this.textures = {};
@@ -159,8 +164,10 @@ export class Game {
     createMap() {
 
         // Сетка для отладки
-        this.createDebugGrid();
+        // this.createDebugGrid();
         
+        this.createEnemies();
+
         // Создаём препятствия по конфигурации
         this.createObstacles();
         
@@ -297,6 +304,16 @@ export class Game {
         return null;
     }
 
+    createEnemies() {
+        const { tileSize, enemyPositions } = this.mapConfig;
+        
+        enemyPositions.forEach(([x, y]) => {
+            const enemy = new Tank(this.textures.playerTankUp1, x * tileSize, y * tileSize, false);
+            this.enemies.push(enemy);
+            this.app.stage.addChild(enemy.sprite);
+        });
+    }
+
     createPlayer() {
         const { tileSize, playerStart } = this.mapConfig;
 
@@ -368,16 +385,84 @@ export class Game {
         
         // Обновляем игрока
         this.updatePlayer();
+
+        this.updateEnemies()
         
         // Обновляем снаряды
         this.updateBullets();
+    }
+
+updateEnemies() {
+    // Простая ИИ для врагов
+    this.enemies.forEach((enemy, index) => {
+        if (enemy.isDestroyed) return;
+        
+        // Создаём массив всех объектов для коллизий
+        const allObstacles = [...this.obstacles.filter(o => !o.canDriveThrough)];
+        if (this.base && !this.base.isDestroyed) {
+            allObstacles.push(this.base);
+        }
+        
+        // Добавляем игрока как препятствие
+        const allCollisionObjects = [...allObstacles];
+        if (this.playerTank && !this.playerTank.isDestroyed) {
+            allCollisionObjects.push(this.playerTank);
+        }
+        
+        // Добавляем других врагов как препятствия
+        const otherEnemies = this.enemies.filter((e, i) => 
+            i !== index && !e.isDestroyed
+        );
+        
+        const allObstaclesForEnemy = [...allCollisionObjects, ...otherEnemies];
+        
+        // Движение в случайном направлении
+        if (Math.random() < 0.02) { // 2% шанс сменить направление
+            const directions = ['up', 'down', 'left', 'right'];
+            enemy.direction = directions[Math.floor(Math.random() * directions.length)];
+        }
+        
+        // Двигаем врага с проверкой коллизий
+        enemy.move(enemy.direction, allObstaclesForEnemy);
+        
+        // Проверяем границы для врага
+        const boundsCheck = CollisionSystem.checkBoundaryCollision(
+            enemy.sprite, 
+            this.gameBounds
+        );
+        
+        if (boundsCheck.left || boundsCheck.right || boundsCheck.top || boundsCheck.bottom) {
+            enemy.direction = this.getOppositeDirection(enemy.direction);
+        }
+        
+        // Случайный выстрел
+        if (Math.random() < 0.01 && enemy.canShoot) { // 1% шанс выстрелить
+            const bullet = enemy.shoot(this.textures.bullet);
+            if (bullet) {
+                this.app.stage.addChild(bullet.sprite);
+                this.bullets.push(bullet);
+            }
+        }
+    });
+}
+    
+    getOppositeDirection(dir) {
+        switch(dir) {
+            case 'up': return 'down';
+            case 'down': return 'up';
+            case 'left': return 'right';
+            case 'right': return 'left';
+        }
+        return dir;
     }
     
     updatePlayer() {
         let moved = false;
         
+        const aliveEnemies = this.enemies.filter(enemy => !enemy.isDestroyed);
+
 // Создаём массив препятствий включая базу
-        const allObstacles = [...this.obstacles.filter(o => !o.canDriveThrough)];
+        const allObstacles = [...this.obstacles.filter(o => !o.canDriveThrough), ...aliveEnemies];
         if (this.base && !this.base.isDestroyed) {
             allObstacles.push(this.base);
         }
@@ -449,7 +534,49 @@ export class Game {
             if (!hitSomething && i < this.bullets.length && this.bullets[i] === bullet) {
                 this.checkBulletBoundaries(bullet, i);
             }
+
+
+            if (bullet.isPlayer) {
+                for (let j = this.enemies.length - 1; j >= 0; j--) {
+                    const enemy = this.enemies[j];
+                    
+                    if (!enemy || enemy.isDestroyed || !enemy.sprite) {
+                        continue;
+                    }
+                    
+                    if (CollisionSystem.checkBulletCollision(bullet, enemy.sprite)) {
+                        console.log('Пуля попала во врага');
+                        const destroyed = enemy.takeDamage(1);
+                        
+                        this.app.stage.removeChild(bullet.sprite);
+                        this.bullets.splice(i, 1);
+
+                        if (destroyed) {
+                            this.enemies.splice(j, 1);
+                            this.score += 100;
+                            if (this.onScoreUpdate) {
+                                this.onScoreUpdate(this.score);
+                            }
+                        }
+                        break;
+                    }
+                }
+            } else {
+                if (CollisionSystem.checkBulletCollision(bullet, this.playerTank.sprite)) {
+                    console.log('Враг попал в игрока');
+                    const destroyed = this.playerTank.takeDamage(1);
+                    
+                    this.app.stage.removeChild(bullet.sprite);
+                    this.bullets.splice(i, 1);
+                    
+                    if (destroyed) {
+                        this.gameOver();
+                    }
+                }
+            }
         }
+
+        
     }
 
 checkBulletObstacleCollision(bullet, bulletIndex) {
@@ -492,8 +619,6 @@ checkBulletObstacleCollision(bullet, bulletIndex) {
     
     let hitSomething = false;
     
-    console.log('validCells ', validCells);
-
     // 5. Разрушаем кирпичи в этих клетках
     for (const {x, y} of validCells) {
         // Получаем препятствие из сетки

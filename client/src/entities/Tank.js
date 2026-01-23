@@ -173,8 +173,9 @@ getObstacleBounds(obstacle) {
         const bullet = {
             sprite: new PIXI.Sprite(bulletTexture),
             direction: this.direction,
-            speed: 1,
+            speed: 8,
             isDestroyed: false,
+            isPlayer: this.isPlayer,
             
             getBounds() {
                 return this.sprite.getBounds();
