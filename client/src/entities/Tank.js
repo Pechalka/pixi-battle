@@ -22,11 +22,11 @@ constructor(texture, x = 100, y = 100, isPlayer = true) {
         };
 
         this.isPlayer = isPlayer;
-        this.speed = 1.5;
+        this.speed = 0.7;
         this.direction = 'up';
         this.bullets = [];
         this.canShoot = true;
-        this.shootCooldown = 500; // 0.5 секунды между выстрелами
+        this.shootCooldown = 10; // 0.5 секунды между выстрелами
 
         this.health = isPlayer ? 3 : 1; // У игрока 3 жизни, у врага 1
         this.isDestroyed = false;
