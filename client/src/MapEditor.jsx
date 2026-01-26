@@ -8,6 +8,7 @@ import { AssetLoader } from "./utils/AssetLoader.js";
 export const MapEditor = () => {
     const canvasRef = useRef(null);
     const editorRef = useRef(null);
+    const selectedToolRef = useRef('brick');
     const [selectedTool, setSelectedTool] = useState('brick');
     const [mapConfig, setMapConfig] = useState({
         tileSize: 16,
@@ -18,6 +19,11 @@ export const MapEditor = () => {
         basePosition: [13, 25],
         playerStart: [8, 25]
     });
+
+    // Синхронизируем ref с state
+    useEffect(() => {
+        selectedToolRef.current = selectedTool;
+    }, [selectedTool]);
 
     useEffect(() => {
         if (!canvasRef.current) return;
@@ -124,7 +130,10 @@ export const MapEditor = () => {
         // Удаляем существующий тайл в этой позиции
         removeTileAt(gridX, gridY);
 
-        if (selectedTool === 'eraser') return;
+        // Используем ref для актуального значения
+        const currentTool = selectedToolRef.current;
+        
+        if (currentTool === 'eraser') return;
 
         // Создаем новый тайл
         const sprite = new PIXI.Sprite();
@@ -133,7 +142,7 @@ export const MapEditor = () => {
         sprite.width = tileSize;
         sprite.height = tileSize;
 
-        switch (selectedTool) {
+        switch (currentTool) {
             case 'brick':
                 sprite.texture = editorRef.current.textures.brick;
                 updateMapConfig('bricks', [gridX, gridY]);
@@ -158,7 +167,7 @@ export const MapEditor = () => {
         }
 
         if (sprite.texture) {
-            sprite.gridPosition = { gridX, gridY, type: selectedTool };
+            sprite.gridPosition = { gridX, gridY, type: currentTool };
             editorRef.current.stage.addChild(sprite);
         }
     };
