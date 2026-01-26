@@ -166,7 +166,7 @@ export class Game {
         // Сетка для отладки
         // this.createDebugGrid();
         
-        this.createEnemies();
+        // this.createEnemies();
 
         // Создаём препятствия по конфигурации
         this.createObstacles();
