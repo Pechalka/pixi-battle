@@ -1,7 +1,7 @@
 import * as PIXI from 'pixi.js';
 
 export class Obstacle {
-    constructor(texture, explosionTexture, x, y, type = 'brick', tileSize = 16) {
+    constructor(texture, explosionTexture, x, y, type = 'brick', tileSize = 32) {
         this.type = type;
         this.health = type !== 'steel' ? 2 : 999;
         this.isDestroyed = false;
@@ -50,14 +50,10 @@ export class Obstacle {
         
         switch(direction) {
             case 'up':
-                this.sprite.texture = this.textures.brickHalfTop;
-                this.sprite.width = 8;
-                this.sprite.height = 8;
+                this.sprite.texture = this.textures.brickHalfBottom;
                 break;
             case 'down':
-                this.sprite.texture = this.textures.brickHalfBottom;
-                this.sprite.width = 8;
-                this.sprite.height = 8;
+                this.sprite.texture = this.textures.brickHalfTop;
                 break;
                 
             case 'left':
