@@ -3,13 +3,21 @@ import * as PIXI from 'pixi.js';
 export class Obstacle {
     constructor(texture, explosionTexture, x, y, type = 'brick', tileSize = 16) {
         this.type = type;
-        this.health = type === 'brick' ? 1 : 999;
+        this.health = type !== 'steel' ? 2 : 999;
         this.isDestroyed = false;
         this.canDriveThrough = false;
         this.canShootThrough = false;
+        this.textures = {
+            brick: texture.brick,
+            brickHalfBottom: texture.brickHalfBottom,
+            brickHalfLeft: texture.brickHalfLeft,
+            brickHalfRight: texture.brickHalfRight,
+            brickHalfTop: texture.brickHalfTop,
+            steel: texture.steel
+        };
         
         // Спрайт
-        this.sprite = new PIXI.Sprite(texture);
+        this.sprite = new PIXI.Sprite(this.textures.brick);
         // this.sprite.anchor.set(0.5);
         this.sprite.anchor.set(0, 0); 
         this.sprite.x = x;
@@ -25,14 +33,44 @@ export class Obstacle {
         if (type === 'steel') {
             this.sprite.tint = 0x888888;
         }
-        
+
+        this.tileSize = tileSize;
+        // console.log("this.health", this.health);
         // Хитбокс
         this.hitbox = {
             x: this.sprite.x - this.sprite.width * this.sprite.anchor.x,
             y: this.sprite.y - this.sprite.height * this.sprite.anchor.y,
             width: this.sprite.width,
             height: this.sprite.height
-        };
+        }; 
+        
+    }
+
+    updateWallDamageTexture(direction) {
+        
+        switch(direction) {
+            case 'up':
+                this.sprite.texture = this.textures.brickHalfTop;
+                this.sprite.width = 8;
+                this.sprite.height = 8;
+                break;
+            case 'down':
+                this.sprite.texture = this.textures.brickHalfBottom;
+                this.sprite.width = 8;
+                this.sprite.height = 8;
+                break;
+                
+            case 'left':
+                this.sprite.texture = this.textures.brickHalfLeft;
+                this.sprite.width = 8;
+                this.sprite.height = 8;
+                break;
+            case 'right':
+                this.sprite.texture = this.textures.brickHalfRight;
+                this.sprite.width = 8;
+                this.sprite.height = 8;
+                break;
+        }
     }
     
     updateHitbox() {
@@ -93,26 +131,25 @@ export class Obstacle {
         requestAnimationFrame(animateExplosion);
     }
     
-    takeDamage(damage) {
+    takeDamage(damage, direction) {
         if (this.type === 'steel') {
-            // Сталь не разрушается
-            // Можно добавить эффект искр при попадании
             this.createSparkEffect();
             return false;
         }
         
         this.health -= damage;
         
+        
         if (this.health <= 0) {
-            // Создаём взрыв перед уничтожением
+            console.log("Блок уничтожен!");
             this.createExplosion();
             this.destroy();
             return true;
         }
         
-        // Визуальный эффект повреждения для кирпича
+        // Визуальный эффект повреждения
         if (this.type === 'brick') {
-            this.sprite.alpha = 0.7;
+            this.updateWallDamageTexture(direction);
         }
         
         return false;
@@ -153,7 +190,11 @@ export class Obstacle {
     destroy() {
         this.isDestroyed = true;
         
-        // Ждём немного перед удалением спрайта (чтобы взрыв успел отобразиться)
+        // Удаляем индикатор HP
+        if (this.hpContainer && this.sprite) {
+            this.sprite.removeChild(this.hpContainer);
+        }
+        
         setTimeout(() => {
             if (this.sprite && this.sprite.parent) {
                 this.sprite.parent.removeChild(this.sprite);
