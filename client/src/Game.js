@@ -164,7 +164,7 @@ export class Game {
     createMap() {
 
         // Сетка для отладки
-        // this.createDebugGrid();
+        this.createDebugGrid();
         
         // this.createEnemies();
 
@@ -253,12 +253,16 @@ export class Game {
         let obstacle;
         switch(type) {
             case 'brick':
-                obstacle = new Obstacle(this.textures.brick, this.textures.explosionSmall, x, y, 'brick', tileSize);
-                obstacle.health = 1; // Кирпич разрушается с одного попадания
+                obstacle = new Obstacle(this.textures, this.textures.explosionSmall, x, y, 'brick', tileSize);
+                obstacle.health = 2; // Кирпич разрушается с одного попадания
                 break;
             case 'steel':
                 obstacle = new Obstacle(this.textures.steel, this.textures.explosionSmall, x, y, 'steel', tileSize);
                 obstacle.health = 999; // Сталь практически неуничтожима
+                break;
+            case 'spark':
+                obstacle = new Obstacle(this.textures.spark, this.textures.explosionSmall, x, y, 'spark', tileSize);
+                obstacle.health = 2; // Сталь практически неуничтожима
                 break;
             default:
                 return null;
@@ -535,6 +539,7 @@ updateEnemies() {
             const hitSomething = this.checkBulletObstacleCollision(bullet, i);
             
             // Если пуля ещё существует (не попала в препятствие), проверяем границы
+
             if (!hitSomething && i < this.bullets.length && this.bullets[i] === bullet) {
                 this.checkBulletBoundaries(bullet, i);
             }
@@ -567,7 +572,6 @@ updateEnemies() {
                 }
             } else {
                 if (CollisionSystem.checkBulletCollision(bullet, this.playerTank.sprite)) {
-                    console.log('Враг попал в игрока');
                     const destroyed = this.playerTank.takeDamage(1);
                     
                     this.app.stage.removeChild(bullet.sprite);
@@ -589,12 +593,8 @@ checkBulletObstacleCollision(bullet, bulletIndex) {
     const { tileSize } = this.mapConfig;
     
     // 1. Определяем центральную клетку попадания
-    const centerGridX = Math.round(bulletX / tileSize);
-    const centerGridY = Math.round(bulletY / tileSize);
-    
-    // 2. Определяем смещение внутри клетки (0-31)
-    const offsetX = bulletX % tileSize;
-    const offsetY = bulletY % tileSize;
+    const centerGridX = Math.floor(bulletX / tileSize);
+    const centerGridY = Math.floor(bulletY / tileSize);
     
     // 3. Какие клетки разрушать в зависимости от направления
     const cellsToDestroy = [];
@@ -620,7 +620,7 @@ checkBulletObstacleCollision(bullet, bulletIndex) {
         x >= 0 && x < this.mapGrid[0].length && 
         y >= 0 && y < this.mapGrid.length
     );
-    
+     
     let hitSomething = false;
     
     // 5. Разрушаем кирпичи в этих клетках
@@ -629,11 +629,8 @@ checkBulletObstacleCollision(bullet, bulletIndex) {
         let obstacle = null;
         if (y >= 0 && y < this.mapGrid.length && 
             x >= 0 && x < this.mapGrid[0].length ) {
-            let cell = null;
-            if (this.mapGrid[y -1]) {
-                cell = this.mapGrid[y -1][x -1];
-            }
-            obstacle = cell ? cell.obstacle : null;
+            let cell = this.mapGrid[y][x]; // <--- Скорее всего здесь должно быть просто [y][x]
+             obstacle = cell ? cell.obstacle : null;
         }
         
         if (!obstacle || obstacle.isDestroyed) continue;
@@ -645,11 +642,12 @@ checkBulletObstacleCollision(bullet, bulletIndex) {
         }
         
         // Для кирпича - разрушаем
-        const destroyed = obstacle.takeDamage(1);
-        
+        const destroyed = obstacle.takeDamage(1, bullet.direction);
+       
+        hitSomething = true;
         if (destroyed) {
             // Удаляем из сетки карты
-            this.mapGrid[y - 1][x - 1] = null;
+            this.mapGrid[y][x] = null;
             
             // Удаляем из массива препятствий
             const obstacleIndex = this.obstacles.indexOf(obstacle);
@@ -657,11 +655,12 @@ checkBulletObstacleCollision(bullet, bulletIndex) {
                 this.obstacles.splice(obstacleIndex, 1);
             }
             
-            hitSomething = true;
+            // hitSomething = true;
         }
+        break;
     }
     
-if (hitSomething) {
+    if (hitSomething) {
         this.removeBullet(bullet, bulletIndex);
         return true;
     }
