@@ -150,38 +150,81 @@ export class Base {
         return false;
     }
     
-    // Проверка попадания в кирпичи стены
+    // Проверка попадания в кирпичи стены (унифицированная с Game.js)
     checkBrickHit(bullet) {
-        for (let i = 0; i < this.bricks.length; i++) {
-            const brick = this.bricks[i];
-            
-            if (brick.isDestroyed) continue;
-            
-            // Получаем глобальные границы кирпича
-            const brickBounds = this.container.toGlobal(new PIXI.Point(brick.x, brick.y));
-            const globalBrickBounds = {
-                x: brickBounds.x,
-                y: brickBounds.y,
-                width: brick.width,
-                height: brick.height
-            };
-            
-            // Проверяем коллизию пули с кирпичом
-            if (CollisionSystem.checkRectCollision(
-                { x: bullet.sprite.x - 2, y: bullet.sprite.y - 2, width: 4, height: 4 },
-                globalBrickBounds
-            )) {
-                // Уничтожаем кирпич
-                this.destroyBrick(i);
-                return true;
+        const bulletX = bullet.sprite.x;
+        const bulletY = bullet.sprite.y;
+        const tileSize = 16; // Размер кирпича
+        
+        // Определяем клетки для проверки как в Game.js
+        const cellsToCheck = [];
+        
+        // Определяем клетку, в которой находится центр пули
+        const centerGridX = Math.floor(bulletX / tileSize);
+        const centerGridY = Math.floor(bulletY / tileSize);
+        // В зависимости от направления, проверяем клетки перед пулей
+        switch(bullet.direction) {
+            case 'up':
+                console.log("up");
+                cellsToCheck.push({x: centerGridX, y: centerGridY - 1});
+                cellsToCheck.push({x: centerGridX + 1, y: centerGridY - 1});
+                break;
+                
+            case 'down':
+                console.log("down");
+                cellsToCheck.push({x: centerGridX, y: centerGridY + 1});
+                cellsToCheck.push({x: centerGridX + 1, y: centerGridY + 1});
+                break;
+                
+            case 'left':
+                console.log("left");
+                cellsToCheck.push({x: centerGridX - 1, y: centerGridY});
+                cellsToCheck.push({x: centerGridX - 1, y: centerGridY + 1});
+                break;
+                
+            case 'right':
+                
+                cellsToCheck.push({x: centerGridX + 1, y: centerGridY});
+                cellsToCheck.push({x: centerGridX + 1, y: centerGridY + 1});
+                console.log("cellsToCheck", cellsToCheck);
+                break;
+        }
+        
+        let hitSomething = false;
+        
+        for (const {x, y} of cellsToCheck) {
+            // Проверяем попадание в кирпичи
+            for (let i = 0; i < this.bricks.length; i++) {
+                const brick = this.bricks[i];
+                
+                if (brick.isDestroyed) continue;
+                
+                // Получаем позицию кирпича в глобальных координатах
+                const brickGlobalX = this.container.x + brick.x;
+                const brickGlobalY = this.container.y + brick.y;
+                
+                // Определяем клетку кирпича
+                const brickGridX = Math.floor(brickGlobalX / tileSize);
+                const brickGridY = Math.floor(brickGlobalY / tileSize);
+                
+                // console.log("brickGridX", brickGridX, "gridX", x);
+                // Проверяем совпадение клеток
+                if (brickGridX === x && brickGridY === y) {
+                    
+                    this.destroyBrick(i);
+                    hitSomething = true;
+                    break;
+                }
             }
         }
         
-        return false;
+        return hitSomething;
     }
     
     // Уничтожение кирпича
     destroyBrick(index) {
+        
+        
         const brick = this.bricks[index];
         if (!brick || brick.isDestroyed) return;
         
