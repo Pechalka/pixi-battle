@@ -1,20 +1,13 @@
 import * as PIXI from 'pixi.js';
 
 export class Obstacle {
-    constructor(texture, explosionTexture, x, y, type = 'brick', tileSize = 32) {
+    constructor(texture, explosionTexture, x, y, type = 'brick', tileSize = 16) {
         this.type = type;
         this.health = type !== 'steel' ? 2 : 999;
         this.isDestroyed = false;
         this.canDriveThrough = false;
         this.canShootThrough = false;
-        this.textures = {
-            brick: texture.brick,
-            brickHalfBottom: texture.brickHalfBottom,
-            brickHalfLeft: texture.brickHalfLeft,
-            brickHalfRight: texture.brickHalfRight,
-            brickHalfTop: texture.brickHalfTop,
-            steel: texture.steel
-        };
+        this.textures = texture;
         
         // Спрайт
         this.sprite = new PIXI.Sprite(this.textures.brick);
@@ -50,21 +43,16 @@ export class Obstacle {
         
         switch(direction) {
             case 'up':
-                this.sprite.texture = this.textures.brickHalfBottom;
+                this.sprite.texture = this.textures.brickHalfUp;
                 break;
             case 'down':
-                this.sprite.texture = this.textures.brickHalfTop;
-                break;
-                
+                this.sprite.texture = this.textures.brickHalfDown;
+                break;                
             case 'left':
                 this.sprite.texture = this.textures.brickHalfLeft;
-                this.sprite.width = 8;
-                this.sprite.height = 8;
                 break;
             case 'right':
                 this.sprite.texture = this.textures.brickHalfRight;
-                this.sprite.width = 8;
-                this.sprite.height = 8;
                 break;
         }
     }

@@ -24,11 +24,11 @@ export class AssetLoader {
             enemyTankArmor: this.extractTexture(spritesheet, 16*8, 16*3, 16, 16), // Серый бронированный враг (строка 4)
             
             // ПРЕПЯТСТВИЯ (16x16 пикселей)
-            brick: this.extractTexture(spritesheet, 16*16, 0, 16, 16),            // Кирпичная стена
-            brickHalfLeft: this.extractTexture(spritesheet, 16*16+8, 16*4, 8, 8),     // Половина кирпичной стены слева
-            brickHalfRight: this.extractTexture(spritesheet, 16*17, 16*4, 8, 8),        // Половина кирпичной стены справа
-            brickHalfTop: this.extractTexture(spritesheet, 16*17+8, 16*4, 8, 8),         // Половина кирпичной стены сверху
-            brickHalfBottom: this.extractTexture(spritesheet, 16*18, 16*4, 8, 8),         // Половина кирпичной стены снизу
+            brick: this.extractTexture(spritesheet, 16*16 + 1, 0, 8, 8),            // Кирпичная стена
+            brickHalfRight: this.extractTexture(spritesheet, 16*16+8 , 16*4, 8, 8),     // Половина кирпичной стены слева
+            brickHalfDown: this.extractTexture(spritesheet, 16*17, 16*4, 8, 8),        // Половина кирпичной стены справа
+            brickHalfLeft: this.extractTexture(spritesheet, 16*17+8 , 16*4, 8, 8),         // Половина кирпичной стены сверху
+            brickHalfUp: this.extractTexture(spritesheet, 16*18 , 16*4, 8, 8),         // Половина кирпичной стены снизу
             steel: this.extractTexture(spritesheet, 16*17 + 8, 16, 8, 8),           // Стальная стена
             water: this.extractTexture(spritesheet, 16*22, 0, 16, 16),            // Вода (анимированная)
             water2: this.extractTexture(spritesheet, 16*22, 16, 16, 16),          // Вода 2-й кадр

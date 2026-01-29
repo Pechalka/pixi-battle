@@ -16,6 +16,7 @@ const MAP_CONFIG = {
     
     // Координаты кирпичей [gridX, gridY] (в клетках, не пикселях!)
     bricks: [
+        // [1, 25], [2, 25], [3, 25], [4, 25], [5, 25], [6, 25], [7, 25], [8, 25], [9, 25],
         // верхние колоны
         [2, 2], [2, 3], [2, 4], [2, 5], [2, 6], [2, 7], [2, 8], [2, 9],
         [3, 2], [3, 3], [3, 4], [3, 5], [3, 6], [3, 7], [3, 8], [3, 9],
@@ -54,7 +55,8 @@ const MAP_CONFIG = {
 
         [22, 16], [22, 17], [22, 18], [22, 19], [22, 20], [22, 21], [22, 22], [22, 23],
         [23, 16], [23, 17], [23, 18], [23, 19], [23, 20], [23, 21], [23, 22], [23, 23],
-
+        // вокруг базы
+        [11, 25], [11, 24], [11, 23], [12, 23], [13, 23], [14, 23], [14, 24], [14, 25]
     ],
     
     // Координаты стальных стен
@@ -125,7 +127,7 @@ export class Game {
             // 2. Загружаем ресурсы
             this.textures = await AssetLoader.loadAssets();
             
-            // 3. Инициализируем сетку карты
+            // 3. Инициализируем сетку карты 
             this.initMapGrid();
             
             // 4. Создаём игровые объекты
@@ -164,7 +166,7 @@ export class Game {
     createMap() {
 
         // Сетка для отладки
-        this.createDebugGrid();
+        // this.createDebugGrid();
         
         // this.createEnemies();
 
@@ -544,7 +546,6 @@ updateEnemies() {
                 this.checkBulletBoundaries(bullet, i);
             }
 
-
             if (bullet.isPlayer) {
                 for (let j = this.enemies.length - 1; j >= 0; j--) {
                     const enemy = this.enemies[j];
@@ -589,16 +590,21 @@ updateEnemies() {
 
 checkBulletObstacleCollision(bullet, bulletIndex) {
     const bulletX = bullet.sprite.x;
-    const bulletY = bullet.sprite.y;
+    const bulletY = bullet.sprite.y + (bullet.sprite.height / 2);
     const { tileSize } = this.mapConfig;
     
     // 1. Определяем центральную клетку попадания
-    const centerGridX = Math.floor(bulletX / tileSize);
-    const centerGridY = Math.floor(bulletY / tileSize);
+    const centerGridX = Math.round(bulletX / tileSize);
+    const centerGridY = Math.round(bulletY / tileSize);
+    
+    // 2. Определяем смещение внутри клетки (0-31)
+    const offsetX = bulletX % tileSize;
+    const offsetY = bulletY % tileSize ;
     
     // 3. Какие клетки разрушать в зависимости от направления
     const cellsToDestroy = [];
-    
+
+
     switch(bullet.direction) {
         case 'up':
         case 'down':
@@ -620,17 +626,20 @@ checkBulletObstacleCollision(bullet, bulletIndex) {
         x >= 0 && x < this.mapGrid[0].length && 
         y >= 0 && y < this.mapGrid.length
     );
-     
-    let hitSomething = false;
     
+    let hitSomething = false;
+    console.log("validCells:", validCells);
     // 5. Разрушаем кирпичи в этих клетках
     for (const {x, y} of validCells) {
         // Получаем препятствие из сетки
         let obstacle = null;
         if (y >= 0 && y < this.mapGrid.length && 
             x >= 0 && x < this.mapGrid[0].length ) {
-            let cell = this.mapGrid[y][x]; // <--- Скорее всего здесь должно быть просто [y][x]
-             obstacle = cell ? cell.obstacle : null;
+            let cell = null;
+            if (this.mapGrid[y -1]) {
+                cell = this.mapGrid[y -1][x -1];
+            }
+            obstacle = cell ? cell.obstacle : null;
         }
         
         if (!obstacle || obstacle.isDestroyed) continue;
@@ -643,11 +652,13 @@ checkBulletObstacleCollision(bullet, bulletIndex) {
         
         // Для кирпича - разрушаем
         const destroyed = obstacle.takeDamage(1, bullet.direction);
-       
-        hitSomething = true;
+        this.removeBullet(bullet, bulletIndex);
+        
+        
+
         if (destroyed) {
             // Удаляем из сетки карты
-            this.mapGrid[y][x] = null;
+            this.mapGrid[y - 1][x - 1] = null;
             
             // Удаляем из массива препятствий
             const obstacleIndex = this.obstacles.indexOf(obstacle);
@@ -655,41 +666,34 @@ checkBulletObstacleCollision(bullet, bulletIndex) {
                 this.obstacles.splice(obstacleIndex, 1);
             }
             
-            // hitSomething = true;
         }
-        break;
+        hitSomething = true;
     }
-    
-    if (hitSomething) {
-        this.removeBullet(bullet, bulletIndex);
+    if(hitSomething) {
         return true;
     }
     
-    // Проверяем коллизию с базой
-    if (this.base && !this.base.isDestroyed) {
-        // Сначала проверяем попадание в кирпичи стены
-        if (this.base.checkBrickHit(bullet)) {
-            this.removeBullet(bullet, bulletIndex);
-            return true;
+    
+        // Проверяем коллизию с базой
+        if (this.base && !this.base.isDestroyed) {
+            
+    // Затем проверяем попадание в орла
+            if (CollisionSystem.checkBulletCollision(bullet, this.base.spriteEagle)) {
+                const destroyed = this.base.takeDamage(1);
+                this.removeBullet(bullet, bulletIndex);
+                
+                if (destroyed) {
+                    // Заменяем орла на уничтоженную базу
+                    this.base.replaceWithDestroyed();
+                    this.gameOver();
+                }
+                
+                return true;
+            }
         }
         
-// Затем проверяем попадание в орла
-        if (CollisionSystem.checkBulletCollision(bullet, this.base.spriteEagle)) {
-            const destroyed = this.base.takeDamage(1);
-            this.removeBullet(bullet, bulletIndex);
-            
-            if (destroyed) {
-                // Заменяем орла на уничтоженную базу
-                this.base.replaceWithDestroyed();
-                this.gameOver();
-            }
-            
-            return true;
-        }
+        return false;
     }
-    
-    return false;
-}
 
     checkBulletBoundaries(bullet, bulletIndex) {
         // Удаляем снаряд за границами
