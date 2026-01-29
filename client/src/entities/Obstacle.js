@@ -44,15 +44,25 @@ export class Obstacle {
         switch(direction) {
             case 'up':
                 this.sprite.texture = this.textures.brickHalfUp;
+                this.sprite.width = 16;
+                this.sprite.height = 8;
                 break;
             case 'down':
                 this.sprite.texture = this.textures.brickHalfDown;
+                this.sprite.y = this.sprite.y + 8;
+                this.sprite.width = 16;
+                this.sprite.height = 8;
                 break;                
             case 'left':
                 this.sprite.texture = this.textures.brickHalfLeft;
+                this.sprite.width = 8;
+                this.sprite.height = 16;
                 break;
             case 'right':
                 this.sprite.texture = this.textures.brickHalfRight;
+                this.sprite.x = this.sprite.x + 8;
+                this.sprite.width = 8;
+                this.sprite.height = 16;
                 break;
         }
     }

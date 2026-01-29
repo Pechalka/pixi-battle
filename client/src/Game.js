@@ -605,7 +605,6 @@ checkBulletObstacleCollision(bullet, bulletIndex) {
         // 3. Какие клетки разрушать в зависимости от направления
         const cellsToDestroy = [];
 
-
         switch (bullet.direction) {
             case 'up':
             case 'down':
@@ -632,9 +631,7 @@ checkBulletObstacleCollision(bullet, bulletIndex) {
         
         // 5. Разрушаем кирпичи в этих клетках
         for (const { x, y } of validCells) {
-            // Получаем препятствие из сетки
-            // console.log("111111:", validCells);
-            
+            // Получаем препятствие из сетки            
             let obstacle = null;
             if (y >= 0 && y < this.mapGrid.length + 1 &&
                 x >= 0 && x < this.mapGrid[0].length + 1) {
@@ -644,9 +641,6 @@ checkBulletObstacleCollision(bullet, bulletIndex) {
                 }
                 obstacle = cell ? cell.obstacle : null;
             }
-            console.log("obstacle:", obstacle);
-            // console.log("222222:", y, x);
-            // console.log("obstacle.isDestroyed:", obstacle.isDestroyed);
             if (!obstacle || obstacle.isDestroyed) continue;
             
             if (obstacle.type === 'steel') {
@@ -654,14 +648,10 @@ checkBulletObstacleCollision(bullet, bulletIndex) {
                 this.removeBullet(bullet, bulletIndex);
                 return true;
             }
-            
             // Для кирпича - разрушаем
             const destroyed = obstacle.takeDamage(1, bullet.direction);
             this.removeBullet(bullet, bulletIndex);
 
-
-
-            // console.log("222222:", y, x, destroyed);
             if (destroyed) {
                 // Удаляем из сетки карты
                 this.mapGrid[y - 1][x - 1] = null;
@@ -691,11 +681,9 @@ checkBulletObstacleCollision(bullet, bulletIndex) {
                     this.base.replaceWithDestroyed();
                     this.gameOver();
                 }
-
                 return true;
             }
         }
-
         return false;
     }
 
