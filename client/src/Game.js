@@ -589,109 +589,113 @@ updateEnemies() {
     }
 
 checkBulletObstacleCollision(bullet, bulletIndex) {
-    const bulletX = bullet.sprite.x;
-    const bulletY = bullet.sprite.y + (bullet.sprite.height / 2);
-    const { tileSize } = this.mapConfig;
-    
-    // 1. Определяем центральную клетку попадания
-    const centerGridX = Math.round(bulletX / tileSize);
-    const centerGridY = Math.round(bulletY / tileSize);
-    
-    // 2. Определяем смещение внутри клетки (0-31)
-    const offsetX = bulletX % tileSize;
-    const offsetY = bulletY % tileSize ;
-    
-    // 3. Какие клетки разрушать в зависимости от направления
-    const cellsToDestroy = [];
+        const bulletX = bullet.sprite.x;
+        const bulletY = bullet.sprite.y + (bullet.sprite.height / 2);
+        const { tileSize } = this.mapConfig;
+
+        // 1. Определяем центральную клетку попадания
+        const centerGridX = Math.round(bulletX / tileSize);
+        // console.log("centerGridX:", centerGridX);
+        const centerGridY = Math.round(bulletY / tileSize);
+        // console.log("centerGridY:", centerGridY);
+        // 2. Определяем смещение внутри клетки (0-31)
+        const offsetX = bulletX % tileSize;
+        const offsetY = bulletY % tileSize;
+
+        // 3. Какие клетки разрушать в зависимости от направления
+        const cellsToDestroy = [];
 
 
-    switch(bullet.direction) {
-        case 'up':
-        case 'down':
-            // Вертикальный выстрел - разрушает 2 клетки по горизонтали
-            cellsToDestroy.push({x: centerGridX, y: centerGridY});
-            cellsToDestroy.push({x: centerGridX + 1, y: centerGridY});
-            break;
-            
-        case 'left':
-        case 'right':
-            // Горизонтальный выстрел - разрушает 2 клетки по вертикали
-            cellsToDestroy.push({x: centerGridX, y: centerGridY});
-            cellsToDestroy.push({x: centerGridX, y: centerGridY + 1});
-            break;
-    }
-    
-    // 4. Фильтруем клетки вне карты
-    const validCells = cellsToDestroy.filter(({x, y}) => 
-        x >= 0 && x < this.mapGrid[0].length && 
-        y >= 0 && y < this.mapGrid.length
-    );
-    
-    let hitSomething = false;
-    console.log("validCells:", validCells);
-    // 5. Разрушаем кирпичи в этих клетках
-    for (const {x, y} of validCells) {
-        // Получаем препятствие из сетки
-        let obstacle = null;
-        if (y >= 0 && y < this.mapGrid.length && 
-            x >= 0 && x < this.mapGrid[0].length ) {
-            let cell = null;
-            if (this.mapGrid[y -1]) {
-                cell = this.mapGrid[y -1][x -1];
-            }
-            obstacle = cell ? cell.obstacle : null;
+        switch (bullet.direction) {
+            case 'up':
+            case 'down':
+                // Вертикальный выстрел - разрушает 2 клетки по горизонтали
+                cellsToDestroy.push({ x: centerGridX, y: centerGridY });
+                cellsToDestroy.push({ x: centerGridX + 1, y: centerGridY });
+                break;
+
+            case 'left':
+            case 'right':
+                // Горизонтальный выстрел - разрушает 2 клетки по вертикали
+                cellsToDestroy.push({ x: centerGridX, y: centerGridY });
+                cellsToDestroy.push({ x: centerGridX, y: centerGridY + 1 });
+                break;
         }
+
+        // 4. Фильтруем клетки вне карты
+        const validCells = cellsToDestroy.filter(({ x, y }) =>
+            x >= 0 && x <= this.mapGrid[0].length &&
+            y >= 0 && y <= this.mapGrid.length
+        );
+
+        let hitSomething = false;
         
-        if (!obstacle || obstacle.isDestroyed) continue;
-        
-        if (obstacle.type === 'steel') {
-            // Пуля уничтожается о сталь
+        // 5. Разрушаем кирпичи в этих клетках
+        for (const { x, y } of validCells) {
+            // Получаем препятствие из сетки
+            // console.log("111111:", validCells);
+            
+            let obstacle = null;
+            if (y >= 0 && y < this.mapGrid.length + 1 &&
+                x >= 0 && x < this.mapGrid[0].length + 1) {
+                let cell = null;
+                if (this.mapGrid[y - 1]) {
+                    cell = this.mapGrid[y - 1][x - 1];
+                }
+                obstacle = cell ? cell.obstacle : null;
+            }
+            console.log("obstacle:", obstacle);
+            // console.log("222222:", y, x);
+            // console.log("obstacle.isDestroyed:", obstacle.isDestroyed);
+            if (!obstacle || obstacle.isDestroyed) continue;
+            
+            if (obstacle.type === 'steel') {
+                // Пуля уничтожается о сталь
+                this.removeBullet(bullet, bulletIndex);
+                return true;
+            }
+            
+            // Для кирпича - разрушаем
+            const destroyed = obstacle.takeDamage(1, bullet.direction);
             this.removeBullet(bullet, bulletIndex);
+
+
+
+            // console.log("222222:", y, x, destroyed);
+            if (destroyed) {
+                // Удаляем из сетки карты
+                this.mapGrid[y - 1][x - 1] = null;
+
+                // Удаляем из массива препятствий
+                const obstacleIndex = this.obstacles.indexOf(obstacle);
+                if (obstacleIndex !== -1) {
+                    this.obstacles.splice(obstacleIndex, 1);
+                }
+            }
+            hitSomething = true;
+        }
+
+        if (hitSomething) {
             return true;
         }
-        
-        // Для кирпича - разрушаем
-        const destroyed = obstacle.takeDamage(1, bullet.direction);
-        this.removeBullet(bullet, bulletIndex);
-        
-        
-
-        if (destroyed) {
-            // Удаляем из сетки карты
-            this.mapGrid[y - 1][x - 1] = null;
-            
-            // Удаляем из массива препятствий
-            const obstacleIndex = this.obstacles.indexOf(obstacle);
-            if (obstacleIndex !== -1) {
-                this.obstacles.splice(obstacleIndex, 1);
-            }
-            
-        }
-        hitSomething = true;
-    }
-    if(hitSomething) {
-        return true;
-    }
-    
-    
         // Проверяем коллизию с базой
         if (this.base && !this.base.isDestroyed) {
-            
-    // Затем проверяем попадание в орла
+
+            // Затем проверяем попадание в орла
             if (CollisionSystem.checkBulletCollision(bullet, this.base.spriteEagle)) {
                 const destroyed = this.base.takeDamage(1);
                 this.removeBullet(bullet, bulletIndex);
-                
+
                 if (destroyed) {
                     // Заменяем орла на уничтоженную базу
                     this.base.replaceWithDestroyed();
                     this.gameOver();
                 }
-                
+
                 return true;
             }
         }
-        
+
         return false;
     }
 
