@@ -27,7 +27,7 @@ export class AssetLoader {
             brick: this.extractTexture(spritesheet, 16*16 + 1, 0, 8, 8),            // Кирпичная стена
             brickHalfRight: this.extractTexture(spritesheet, 16*16 + 5, 0, 4, 8),     // Половина кирпичной стены слева
             brickHalfDown: this.extractTexture(spritesheet, 16*16 + 1, 0 + 4, 8, 4),        // Половина кирпичной стены справа
-            brickHalfLeft: this.extractTexture(spritesheet, 16*16+9 , 0, 4, 8),         // Половина кирпичной стены сверху
+            brickHalfLeft: this.extractTexture(spritesheet, 16*16 + 9 , 0, 4, 8),         // Половина кирпичной стены сверху
             brickHalfUp: this.extractTexture(spritesheet, 16*16 + 1, 0, 8, 4),         // Половина кирпичной стены снизу
             steel: this.extractTexture(spritesheet, 16*17 + 8, 16, 8, 8),           // Стальная стена
             water: this.extractTexture(spritesheet, 16*22, 0, 16, 16),            // Вода (анимированная)
@@ -40,8 +40,9 @@ export class AssetLoader {
             bulletBig: this.extractTexture(spritesheet, 16*6+8, 16*7, 8, 8),      // Улучшенный снаряд
             
             // АНИМАЦИИ И ЭФФЕКТЫ
-            explosionSmall: this.extractTexture(spritesheet, 16*4, 16*7, 16, 16), // Маленький взрыв
-            explosionBig: this.extractTexture(spritesheet, 16*5, 16*7, 32, 32),   // Большой взрыв
+            explosionSmall: this.extractTexture(spritesheet, 16*16, 16*8, 16, 16), // Маленький взрыв
+            explosionMiddle: this.extractTexture(spritesheet, 16*17, 16*8, 16, 16), // Средний взрыв
+            explosionBig: this.extractTexture(spritesheet, 16*18, 16*8, 16, 16),   // Большой взрыв
             spark: this.extractTexture(spritesheet, 16*16, 16*9, 16, 16),            // Искры при попадании в сталь
             
             // БОНУСЫ (16x16 пикселей)

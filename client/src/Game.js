@@ -255,15 +255,15 @@ export class Game {
         let obstacle;
         switch(type) {
             case 'brick':
-                obstacle = new Obstacle(this.textures, this.textures.explosionSmall, x, y, 'brick', tileSize);
+                obstacle = new Obstacle(this.textures, x, y, 'brick', tileSize);
                 obstacle.health = 2; // Кирпич разрушается с одного попадания
                 break;
             case 'steel':
-                obstacle = new Obstacle(this.textures.steel, this.textures.explosionSmall, x, y, 'steel', tileSize);
+                obstacle = new Obstacle(this.textures, x, y, 'steel', tileSize);
                 obstacle.health = 999; // Сталь практически неуничтожима
                 break;
             case 'spark':
-                obstacle = new Obstacle(this.textures.spark, this.textures.explosionSmall, x, y, 'spark', tileSize);
+                obstacle = new Obstacle(this.textures, x, y, 'spark', tileSize);
                 obstacle.health = 2; // Сталь практически неуничтожима
                 break;
             default:
@@ -696,6 +696,9 @@ checkBulletObstacleCollision(bullet, bulletIndex) {
     }
 
     removeBullet(bullet, index) {
+        
+        this.createExplosion(bullet);
+
         if (bullet.sprite && bullet.sprite.parent) {
             this.app.stage.removeChild(bullet.sprite);
         }
@@ -703,6 +706,31 @@ checkBulletObstacleCollision(bullet, bulletIndex) {
         if (index < this.bullets.length && this.bullets[index] === bullet) {
             this.bullets.splice(index, 1);
         }
+    }
+
+    createExplosion(bullet) {
+        const explosionTextures = [
+            this.textures.explosionSmall,
+            this.textures.explosionMiddle,
+            this.textures.explosionBig
+        ];
+
+        const explosion = new PIXI.AnimatedSprite(explosionTextures);
+
+        explosion.anchor.set(0.5);
+        explosion.x = bullet.sprite.x;
+        explosion.y = bullet.sprite.y;
+        explosion.scale.set(1.5);
+
+        explosion.loop = false;
+        explosion.animationSpeed = 0.5;
+
+        explosion.onComplete = () => {
+            explosion.destroy();
+        }
+
+        this.app.stage.addChild(explosion);
+        explosion.play();
     }
 
     gameOver() {

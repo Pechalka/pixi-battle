@@ -52,8 +52,6 @@ export class Base {
         return false;
     }
     
-   
-    
     destroy() {
         this.isDestroyed = true;
         this.canDriveThrough = true; // Теперь можно проезжать через уничтоженную базу
