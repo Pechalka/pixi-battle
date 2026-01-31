@@ -29,7 +29,7 @@ export class AssetLoader {
             brickHalfDown: this.extractTexture(spritesheet, 16*16 + 1, 0 + 4, 8, 4),        // Половина кирпичной стены справа
             brickHalfLeft: this.extractTexture(spritesheet, 16*16 + 9 , 0, 4, 8),         // Половина кирпичной стены сверху
             brickHalfUp: this.extractTexture(spritesheet, 16*16 + 1, 0, 8, 4),         // Половина кирпичной стены снизу
-            steel: this.extractTexture(spritesheet, 16*17 + 8, 16, 8, 8),           // Стальная стена
+            steel: this.extractTexture(spritesheet, 16*16, 16, 8, 8),           // Стальная стена
             water: this.extractTexture(spritesheet, 16*22, 0, 16, 16),            // Вода (анимированная)
             water2: this.extractTexture(spritesheet, 16*22, 16, 16, 16),          // Вода 2-й кадр
             forest: this.extractTexture(spritesheet, 16*24, 0, 16, 16),           // Лес
