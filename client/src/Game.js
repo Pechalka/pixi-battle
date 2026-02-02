@@ -13,7 +13,7 @@ const MAP_CONFIG = {
     tileSize: 16,       // Удвоенный размер тайла
     mapWidth: 26,       // Ширина в тайлах (416px)
     mapHeight: 26,
-    
+
     // Координаты кирпичей [gridX, gridY] (в клетках, не пикселях!)
     bricks: [
         // [1, 25], [2, 25], [3, 25], [4, 25], [5, 25], [6, 25], [7, 25], [8, 25], [9, 25],
@@ -45,7 +45,7 @@ const MAP_CONFIG = {
         [7, 16], [7, 17], [7, 18], [7, 19], [7, 20], [7, 21], [7, 22], [7, 23],
 
         [10, 14], [10, 15], [10, 16], [10, 17], [10, 18], [10, 19], [10, 20],
-        [11, 14], [11, 15], [11, 16], [11, 17], [11, 18], [11, 19], [11, 20], 
+        [11, 14], [11, 15], [11, 16], [11, 17], [11, 18], [11, 19], [11, 20],
 
         [14, 14], [14, 15], [14, 16], [14, 17], [14, 18], [14, 19], [14, 20],
         [15, 14], [15, 15], [15, 16], [15, 17], [15, 18], [15, 19], [15, 20],
@@ -58,11 +58,11 @@ const MAP_CONFIG = {
         // вокруг базы
         [11, 25], [11, 24], [11, 23], [12, 23], [13, 23], [14, 23], [14, 24], [14, 25]
     ],
-    
+
     // Координаты стальных стен
     steels: [
-        [ 12, 5], [ 13, 5],
-        [ 12, 6], [ 13, 6],
+        [12, 5], [13, 5],
+        [12, 6], [13, 6],
 
         // Стальной блок
         // [18, 5], [19, 5], [18, 6], [19, 6],
@@ -71,12 +71,12 @@ const MAP_CONFIG = {
     ],
 
     basePosition: [13, 25],  // Позиция базы [gridX, gridY]
-    
+
     // Позиция игрока [gridX, gridY] (левая верхняя клетка танка 2×2)
     playerStart: [9, 25],
 
     enemyPositions: [
-        [1, 1], [13, 1], [25, 1] 
+        [1, 1], [13, 1], [25, 1]
     ]
 };
 
@@ -96,24 +96,24 @@ export class Game {
 
         this.mapConfig = MAP_CONFIG;
 
-        this.gameBounds = { 
-            x: 0, y: 0, 
+        this.gameBounds = {
+            x: 0, y: 0,
             width: this.mapConfig.mapWidth * this.mapConfig.tileSize,
             height: this.mapConfig.mapHeight * this.mapConfig.tileSize
         };
         this.score = 0;
 
-// console.log('Game constructor');
+        // console.log('Game constructor');
         this.init();
     }
-    
+
     async init() {
         console.log('Инициализация игры...');
-        
+
         try {
             // 1. Создаём приложение PixiJS
             this.app = new PIXI.Application();
-            
+
             await this.app.init({
                 canvas: this.canvas,
                 width: this.gameBounds.width,
@@ -121,21 +121,21 @@ export class Game {
                 backgroundColor: 0x000000,
                 resolution: 1,
             });
-            
+
             console.log('PixiJS инициализирован');
-            
+
             // 2. Загружаем ресурсы
             this.textures = await AssetLoader.loadAssets();
-            
+
             // 3. Инициализируем сетку карты 
             this.initMapGrid();
-            
+
             // 4. Создаём игровые объекты
             this.createGame();
-            
+
             // 5. Настраиваем управление
             this.setupControls();
-            
+
             // 6. Запускаем игровой цикл
             this.startGameLoop();
 
@@ -143,7 +143,7 @@ export class Game {
             console.error('Ошибка инициализации игры:', error);
         }
     }
-    
+
     // Инициализация сетки карты
     initMapGrid() {
         const { mapWidth, mapHeight } = this.mapConfig;
@@ -151,37 +151,37 @@ export class Game {
             () => Array(mapWidth).fill(null)
         );
     }
-    
+
     createGame() {
         // Создаём карту
         this.createMap();
-        
+
         // Создаём танк игрока
         this.createPlayer();
 
         // Создаём базу
         this.createBase();
     }
-    
+
     createMap() {
 
         // Сетка для отладки
         // this.createDebugGrid();
-        
-        // this.createEnemies();
+
+        this.createEnemies();
 
         // Создаём препятствия по конфигурации
         this.createObstacles();
-        
+
     }
 
-    createDebugGrid() {    
+    createDebugGrid() {
         const grid = new PIXI.Graphics();
-        
+
         // 1. Тестовый квадрат
         grid.rect(0, 0, this.gameBounds.width, this.gameBounds.height);
         grid.fill(0x00FF00);
-        
+
         // 2. Красная рамка
         grid.rect(0, 0, this.gameBounds.width, this.gameBounds.height);
         grid.stroke({
@@ -189,71 +189,71 @@ export class Game {
             color: 0xFF0000,
             alpha: 1
         });
-        
+
         // 3. Сетка - используем setStrokeStyle перед рисованием
         const { tileSize } = this.mapConfig;
-        
+
         // Устанавливаем стиль для сетки
         grid.setStrokeStyle({
             width: 1,
             color: 0x333333,
             alpha: 0.3
         });
-        
+
         // Рисуем вертикальные линии
         for (let x = 0; x <= this.gameBounds.width; x += tileSize) {
             grid.moveTo(x, 0);
             grid.lineTo(x, this.gameBounds.height);
         }
-        
+
         // Рисуем горизонтальные линии
         for (let y = 0; y <= this.gameBounds.height; y += tileSize) {
             grid.moveTo(0, y);
             grid.lineTo(this.gameBounds.width, y);
         }
-        
+
         // Завершаем stroke
         grid.stroke();
-        
+
         this.app.stage.addChild(grid);
     }
 
 
     createObstacles() {
         const { tileSize, bricks, steels } = this.mapConfig;
-        
+
         // Создаём кирпичные стены из конфигурации
         bricks.forEach(([gridX, gridY]) => {
             this.addObstacle('brick', gridX * tileSize, gridY * tileSize);
         });
-        
+
         // Создаём стальные стены из конфигурации
         steels.forEach(([gridX, gridY]) => {
             this.addObstacle('steel', gridX * tileSize, gridY * tileSize);
         });
     }
 
- 
+
     addObstacle(type, x, y) {
         const { tileSize, mapWidth, mapHeight } = this.mapConfig;
-        
+
         // Проверяем, что координаты в пределах карты
         const gridX = Math.floor(x / tileSize);
         const gridY = Math.floor(y / tileSize);
-        
+
         if (gridX < 0 || gridX >= mapWidth || gridY < 0 || gridY >= mapHeight) {
             console.warn(`Недопустимые координаты препятствия: ${x}, ${y}`);
             return null;
         }
-        
+
         // Проверяем, не занята ли уже эта ячейка
         if (this.mapGrid[gridY][gridX]) {
             console.warn(`Ячейка ${gridX}, ${gridY} уже занята`);
             return null;
         }
-        
+
         let obstacle;
-        switch(type) {
+        switch (type) {
             case 'brick':
                 obstacle = new Obstacle(this.textures, x, y, 'brick', tileSize);
                 obstacle.health = 2; // Кирпич разрушается с одного попадания
@@ -269,16 +269,16 @@ export class Game {
             default:
                 return null;
         }
-        
+
         // Записываем в сетку карты
         this.mapGrid[gridY][gridX] = {
             obstacle: obstacle,
             type: type
         };
-        
+
         this.obstacles.push(obstacle);
         this.app.stage.addChild(obstacle.sprite);
-        
+
         return obstacle;
     }
 
@@ -287,8 +287,8 @@ export class Game {
         const { tileSize } = this.mapConfig;
         const gridX = Math.floor(x / tileSize);
         const gridY = Math.floor(y / tileSize);
-        
-        if (gridX >= 0 && gridX < this.mapGrid[0].length && 
+
+        if (gridX >= 0 && gridX < this.mapGrid[0].length &&
             gridY >= 0 && gridY < this.mapGrid.length) {
             this.mapGrid[gridY][gridX] = null;
             return true;
@@ -301,8 +301,8 @@ export class Game {
         const { tileSize } = this.mapConfig;
         const gridX = Math.floor(x / tileSize);
         const gridY = Math.floor(y / tileSize);
-        
-        if (gridX >= 0 && gridX < this.mapGrid[0].length && 
+
+        if (gridX >= 0 && gridX < this.mapGrid[0].length &&
             gridY >= 0 && gridY < this.mapGrid.length) {
             const cell = this.mapGrid[gridY][gridX];
             return cell ? cell.obstacle : null;
@@ -312,11 +312,9 @@ export class Game {
 
     createEnemies() {
         const { tileSize, enemyPositions } = this.mapConfig;
-        
-        enemyPositions.forEach(([x, y]) => {
-            const enemy = new Tank(this.textures.playerTankUp1, x * tileSize, y * tileSize, false);
-            enemy.textures = this.textures;
 
+        enemyPositions.forEach(([x, y]) => {
+            const enemy = new Tank(this.textures, x * tileSize, y * tileSize, false, 'enemyTankBasic');
             this.enemies.push(enemy);
             this.app.stage.addChild(enemy.sprite);
         });
@@ -328,16 +326,12 @@ export class Game {
         const [x, y] = playerStart;
 
         // Ставим игрока в безопасное место (рядом с низом)
-        this.playerTank = new Tank(this.textures.playerTankUp1, 
-                                  x * tileSize, 
-                                  y * tileSize, 
-                                  true);
+        this.playerTank = new Tank(this.textures,
+            x * tileSize,
+            y * tileSize,
+            true,
+            'playerTank');
 
-        this.playerTank.textures = this.textures;
-
-        // Устанавливаем текстуры для анимации
-        this.playerTank.setTextures(this.textures);
-        
         this.app.stage.addChild(this.playerTank.sprite);
     }
 
@@ -346,118 +340,118 @@ export class Game {
         const [x, y] = basePosition;
 
         this.base = new Base(this.textures.base, this.textures.brick, x * tileSize, y * tileSize, tileSize);
-                this.base.setDestroyedTexture(this.textures.baseDestroyed);        
-                this.app.stage.addChild(this.base.container);
+        this.base.setDestroyedTexture(this.textures.baseDestroyed);
+        this.app.stage.addChild(this.base.container);
     }
-    
+
     setupControls() {
         const keydownHandler = (e) => {
             this.keysPressed[e.key.toLowerCase()] = true;
-            
+
             if (e.key === ' ') {
                 this.playerShoot();
             }
         };
-        
+
         const keyupHandler = (e) => {
             this.keysPressed[e.key.toLowerCase()] = false;
         };
-        
+
         window.addEventListener('keydown', keydownHandler);
         window.addEventListener('keyup', keyupHandler);
-        
+
         // Сохраняем ссылки для удаления
         this.keydownHandler = keydownHandler;
         this.keyupHandler = keyupHandler;
     }
-    
+
     playerShoot() {
         if (!this.playerTank || this.playerTank.isDestroyed) return;
-        
+
         const bullet = this.playerTank.shoot(this.textures.bullet);
         if (bullet) {
             this.app.stage.addChild(bullet.sprite);
             this.bullets.push(bullet);
         }
     }
-    
+
     startGameLoop() {
         this.app.ticker.add(() => {
             this.update();
         });
     }
-    
+
     update() {
         if (!this.playerTank || this.playerTank.isDestroyed) {
             this.gameOver();
             return;
         }
-        
+
         // Обновляем игрока
         this.updatePlayer();
 
         this.updateEnemies()
-        
+
         // Обновляем снаряды
         this.updateBullets();
     }
 
-updateEnemies() {
-    // Простая ИИ для врагов
-    this.enemies.forEach((enemy, index) => {
-        if (enemy.isDestroyed) return;
-        
-        // Создаём массив всех объектов для коллизий
-        const allObstacles = [...this.obstacles.filter(o => !o.canDriveThrough)];
-        if (this.base && !this.base.isDestroyed) {
-            allObstacles.push(this.base);
-        }
-        
-        // Добавляем игрока как препятствие
-        const allCollisionObjects = [...allObstacles];
-        if (this.playerTank && !this.playerTank.isDestroyed) {
-            allCollisionObjects.push(this.playerTank);
-        }
-        
-        // Добавляем других врагов как препятствия
-        const otherEnemies = this.enemies.filter((e, i) => 
-            i !== index && !e.isDestroyed
-        );
-        
-        const allObstaclesForEnemy = [...allCollisionObjects, ...otherEnemies];
-        
-        // Движение в случайном направлении
-        if (Math.random() < 0.02) { // 2% шанс сменить направление
-            const directions = ['up', 'down', 'left', 'right'];
-            enemy.direction = directions[Math.floor(Math.random() * directions.length)];
-        }
-        
-        // Двигаем врага с проверкой коллизий
-        enemy.move(enemy.direction, allObstaclesForEnemy);
-        
-        // Проверяем границы для врага
-        const boundsCheck = CollisionSystem.checkBoundaryCollision(
-            enemy.sprite, 
-            this.gameBounds
-        );
-        
-        if (boundsCheck.left || boundsCheck.right || boundsCheck.top || boundsCheck.bottom) {
-            enemy.direction = this.getOppositeDirection(enemy.direction);
-        }
-        
-        // Случайный выстрел
-        if (Math.random() < 0.01 && enemy.canShoot) { // 1% шанс выстрелить
-            const bullet = enemy.shoot(this.textures.bullet);
-            if (bullet) {
-                this.app.stage.addChild(bullet.sprite);
-                this.bullets.push(bullet);
+    updateEnemies() {
+        // Простая ИИ для врагов
+        this.enemies.forEach((enemy, index) => {
+            if (enemy.isDestroyed) return;
+
+            // Создаём массив всех объектов для коллизий
+            const allObstacles = [...this.obstacles.filter(o => !o.canDriveThrough)];
+            if (this.base && !this.base.isDestroyed) {
+                allObstacles.push(this.base);
             }
-        }
-    });
-}
-    
+
+            // Добавляем игрока как препятствие
+            const allCollisionObjects = [...allObstacles];
+            if (this.playerTank && !this.playerTank.isDestroyed) {
+                allCollisionObjects.push(this.playerTank);
+            }
+
+            // Добавляем других врагов как препятствия
+            const otherEnemies = this.enemies.filter((e, i) =>
+                i !== index && !e.isDestroyed
+            );
+
+            const allObstaclesForEnemy = [...allCollisionObjects, ...otherEnemies];
+
+            // Движение в случайном направлении
+            if (Math.random() < 0.02) { // 2% шанс сменить направление
+                const directions = ['up', 'down', 'left', 'right'];
+                enemy.direction = directions[Math.floor(Math.random() * directions.length)];
+            }
+
+            // Двигаем врага с проверкой коллизий
+            enemy.move(enemy.direction, allObstaclesForEnemy);
+
+            // Проверяем границы для врага
+            const boundsCheck = CollisionSystem.checkBoundaryCollision(
+                enemy.sprite,
+                this.gameBounds
+            );
+
+            if (boundsCheck.left || boundsCheck.right || boundsCheck.top || boundsCheck.bottom) {
+                enemy.direction = this.getOppositeDirection(enemy.direction);
+            }
+
+            // Случайный выстрел
+            if (Math.random() < 0.01 && enemy.canShoot) { // 1% шанс выстрелить
+                const bullet = enemy.shoot(this.textures.bullet);
+                if (bullet) {
+                    this.app.stage.addChild(bullet.sprite);
+                    this.bullets.push(bullet);
+                }
+            }
+        });
+    }
+
     getOppositeDirection(dir) {
-        switch(dir) {
+        switch (dir) {
             case 'up': return 'down';
             case 'down': return 'up';
             case 'left': return 'right';
@@ -465,18 +459,18 @@ updateEnemies() {
         }
         return dir;
     }
-    
+
     updatePlayer() {
         let moved = false;
-        
+
         const aliveEnemies = this.enemies.filter(enemy => !enemy.isDestroyed);
 
-// Создаём массив препятствий включая базу
+        // Создаём массив препятствий включая базу
         const allObstacles = [...this.obstacles.filter(o => !o.canDriveThrough), ...aliveEnemies];
         if (this.base && !this.base.isDestroyed) {
             allObstacles.push(this.base);
         }
-        
+
         if (this.keysPressed['w'] || this.keysPressed['arrowup']) {
             moved = this.playerTank.move('up', allObstacles);
         }
@@ -489,23 +483,23 @@ updateEnemies() {
         if (this.keysPressed['d'] || this.keysPressed['arrowright']) {
             moved = this.playerTank.move('right', allObstacles);
         }
-        
+
         // Проверяем границы экрана
         const boundsCheck = CollisionSystem.checkBoundaryCollision(
-            this.playerTank.sprite, 
+            this.playerTank.sprite,
             this.gameBounds
         );
-        
+
         if (boundsCheck.left || boundsCheck.right || boundsCheck.top || boundsCheck.bottom) {
             // Отталкиваем от границы
             if (boundsCheck.left) this.playerTank.sprite.x = this.gameBounds.x + this.playerTank.sprite.width * this.playerTank.sprite.anchor.x;
             if (boundsCheck.right) this.playerTank.sprite.x = this.gameBounds.width - this.playerTank.sprite.width * (1 - this.playerTank.sprite.anchor.x);
             if (boundsCheck.top) this.playerTank.sprite.y = this.gameBounds.y + this.playerTank.sprite.height * this.playerTank.sprite.anchor.y;
             if (boundsCheck.bottom) this.playerTank.sprite.y = this.gameBounds.height - this.playerTank.sprite.height * (1 - this.playerTank.sprite.anchor.y);
-            
+
             this.playerTank.updateHitbox();
         }
-        
+
         // Если танк не двигался в этом кадре, останавливаем анимацию
         if (!moved && this.playerTank.isMoving) {
             this.playerTank.stopAnimation();
@@ -515,13 +509,13 @@ updateEnemies() {
     updateBullets() {
         for (let i = this.bullets.length - 1; i >= 0; i--) {
             const bullet = this.bullets[i];
-            
+
             // КРИТИЧНО: проверяем существует ли пуля и её спрайт
             if (!bullet || !bullet.sprite || bullet.isDestroyed) {
                 this.bullets.splice(i, 1);
                 continue;
             }
-            
+
             // Проверяем что спрайт ещё прикреплён к сцене
             if (!bullet.sprite.parent) {
                 this.bullets.splice(i, 1);
@@ -529,17 +523,17 @@ updateEnemies() {
             }
 
             // Двигаем снаряд
-            switch(bullet.direction) {
+            switch (bullet.direction) {
                 case 'up': bullet.sprite.y -= bullet.speed; break;
                 case 'down': bullet.sprite.y += bullet.speed; break;
                 case 'left': bullet.sprite.x -= bullet.speed; break;
                 case 'right': bullet.sprite.x += bullet.speed; break;
             }
-            
+
             // ВАЖНО: Проверяем коллизии ДО проверки границ!
             // Если пуля попала во что-то, она удаляется в checkBulletObstacleCollision
             const hitSomething = this.checkBulletObstacleCollision(bullet, i);
-            
+
             // Если пуля ещё существует (не попала в препятствие), проверяем границы
 
             if (!hitSomething && i < this.bullets.length && this.bullets[i] === bullet) {
@@ -549,17 +543,18 @@ updateEnemies() {
             if (bullet.isPlayer) {
                 for (let j = this.enemies.length - 1; j >= 0; j--) {
                     const enemy = this.enemies[j];
-                    
+
                     if (!enemy || enemy.isDestroyed || !enemy.sprite) {
                         continue;
                     }
-                    
+
                     if (CollisionSystem.checkBulletCollision(bullet, enemy.sprite)) {
                         console.log('Пуля попала во врага');
                         const destroyed = enemy.takeDamage(1);
-                        
-                        this.app.stage.removeChild(bullet.sprite);
-                        this.bullets.splice(i, 1);
+
+                        // this.app.stage.removeChild(bullet.sprite);
+                        this.removeBullet(bullet, i);
+                        // this.bullets.splice(i, 1);
 
                         if (destroyed) {
                             this.enemies.splice(j, 1);
@@ -574,10 +569,10 @@ updateEnemies() {
             } else {
                 if (CollisionSystem.checkBulletCollision(bullet, this.playerTank.sprite)) {
                     const destroyed = this.playerTank.takeDamage(1);
-                    
+
                     this.app.stage.removeChild(bullet.sprite);
                     this.bullets.splice(i, 1);
-                    
+
                     if (destroyed) {
                         this.gameOver();
                     }
@@ -585,10 +580,10 @@ updateEnemies() {
             }
         }
 
-        
+
     }
 
-checkBulletObstacleCollision(bullet, bulletIndex) {
+    checkBulletObstacleCollision(bullet, bulletIndex) {
         const bulletX = bullet.sprite.x;
         const bulletY = bullet.sprite.y + (bullet.sprite.height / 2);
         const { tileSize } = this.mapConfig;
@@ -628,7 +623,7 @@ checkBulletObstacleCollision(bullet, bulletIndex) {
         );
 
         let hitSomething = false;
-        
+
         // 5. Разрушаем кирпичи в этих клетках
         for (const { x, y } of validCells) {
             // Получаем препятствие из сетки            
@@ -642,7 +637,7 @@ checkBulletObstacleCollision(bullet, bulletIndex) {
                 obstacle = cell ? cell.obstacle : null;
             }
             if (!obstacle || obstacle.isDestroyed) continue;
-            
+
             if (obstacle.type === 'steel') {
                 // Пуля уничтожается о сталь
                 this.removeBullet(bullet, bulletIndex);
@@ -689,20 +684,21 @@ checkBulletObstacleCollision(bullet, bulletIndex) {
 
     checkBulletBoundaries(bullet, bulletIndex) {
         // Удаляем снаряд за границами
-        if (bullet.sprite.x < -50 || bullet.sprite.x > this.gameBounds.width + 50 || 
+        if (bullet.sprite.x < -50 || bullet.sprite.x > this.gameBounds.width + 50 ||
             bullet.sprite.y < -50 || bullet.sprite.y > this.gameBounds.height + 50) {
             this.removeBullet(bullet, bulletIndex);
         }
     }
 
     removeBullet(bullet, index) {
+        console.log("11");
         
         this.createExplosion(bullet);
 
         if (bullet.sprite && bullet.sprite.parent) {
             this.app.stage.removeChild(bullet.sprite);
         }
-        
+
         if (index < this.bullets.length && this.bullets[index] === bullet) {
             this.bullets.splice(index, 1);
         }
@@ -735,7 +731,7 @@ checkBulletObstacleCollision(bullet, bulletIndex) {
 
     gameOver() {
         console.log('Игра окончена! Счёт:', this.score);
-        
+
         // Экран Game Over
         const gameOverText = new PIXI.Text({
             text: `GAME OVER\nScore: ${this.score}`,
@@ -745,19 +741,19 @@ checkBulletObstacleCollision(bullet, bulletIndex) {
                 align: 'center'
             }
         });
-        
+
         gameOverText.anchor.set(0.5);
         gameOverText.x = this.gameBounds.width / 2;
         gameOverText.y = this.gameBounds.height / 2;
-        
-        
+
+
         this.app.stage.addChild(gameOverText);
 
-        
+
         // Останавливаем игру
         this.app.ticker.stop();
     }
-    
+
     destroy() {
         // console.log('destroy Game');
         // if (this.app) {
@@ -770,7 +766,7 @@ checkBulletObstacleCollision(bullet, bulletIndex) {
         if (this.keydownHandler) {
             window.removeEventListener('keydown', this.keydownHandler);
         }
-        
+
         if (this.keyupHandler) {
             window.removeEventListener('keyup', this.keyupHandler);
         }
