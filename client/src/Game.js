@@ -691,7 +691,6 @@ export class Game {
     }
 
     removeBullet(bullet, index) {
-        console.log("11");
         
         this.createExplosion(bullet);
 

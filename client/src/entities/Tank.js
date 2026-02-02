@@ -59,18 +59,15 @@ export class Tank {
     move(direction, obstacles = []) {
         const prevX = this.sprite.x;
         const prevY = this.sprite.y;
-
         // Handle direction change alignment
-        if (this.direction !== direction) {
-            // Align to grid when turning
-            if (direction === 'up' || direction === 'down') {
-                this.sprite.x = Math.round(this.sprite.x / 16) * 16;
-            } else {
-                this.sprite.y = Math.round(this.sprite.y / 16) * 16;
-            }
-            this.direction = direction;
-            this.updateSpriteByDirection(); // Update animation textures IMMEDIATELY on turn
+        if (direction === 'up' || direction === 'down') {
+            this.sprite.x = Math.round(this.sprite.x / 16) * 16;
+        } else {
+            this.sprite.y = Math.round(this.sprite.y / 16) * 16;
         }
+        this.direction = direction;
+        
+        this.updateSpriteByDirection(); // Update animation textures IMMEDIATELY on turn
 
         this.startAnimation(); // Ensure animation is playing when moving
 
@@ -169,7 +166,7 @@ export class Tank {
         // AI logic or other updates
     }
 
-    shoot(bulletTexture) {
+    shoot(bulletTexture) {        
         if (!this.canShoot) return null;
 
         const bullet = {
@@ -278,7 +275,7 @@ export class Tank {
     }
 
     updateSpriteByDirection() {
-        if (!this.textures) return;
+        if (!this.textures) return;     
 
         // Assuming keys like 'playerTankUp', 'playerTankLeft' etc.
         const textureKey = `playerTank${this.capitalizeFirst(this.direction)}`;
