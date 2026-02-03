@@ -7,6 +7,8 @@ import { CollisionSystem } from './utils/CollisionSystem.js';
 import { Tank } from './entities/Tank.js';
 import { Base } from './entities/Base.js';
 import { Obstacle } from './entities/Obstacle.js';
+import { io } from 'socket.io-client';
+
 
 
 const MAP_CONFIG = {
@@ -81,10 +83,12 @@ const MAP_CONFIG = {
 };
 
 export class Game {
-    constructor(canvasElement) {
+    constructor(canvasElement, player, socket) {
+        this.player = player;
         this.canvas = canvasElement;
         this.app = null;
         this.playerTank = null;
+        this.playerTank2 = null;
         this.bullets = [];
         this.obstacles = []; // Массив препятствий
         this.mapGrid = null; // Сетка карты для быстрого доступа
@@ -93,6 +97,7 @@ export class Game {
         this.keysPressed = {};
         this.textures = {};
         this.base = {};
+        this.socket = socket;
 
         this.mapConfig = MAP_CONFIG;
 
@@ -130,14 +135,17 @@ export class Game {
             // 3. Инициализируем сетку карты 
             this.initMapGrid();
             
-            // 4. Создаём игровые объекты
-            this.createGame();
+            this.socket.emit('start');
+
+            this.socket.on('game-init', state => {
+                this.createGame(state);
+                this.startGameLoop();
+            })
+
+
             
-            // 5. Настраиваем управление
             this.setupControls();
             
-            // 6. Запускаем игровой цикл
-            this.startGameLoop();
 
         } catch (error) {
             console.error('Ошибка инициализации игры:', error);
@@ -152,28 +160,17 @@ export class Game {
         );
     }
     
-    createGame() {
+    createGame(state) {
         // Создаём карту
-        this.createMap();
-        
+        this.createObstacles(state);
+
         // Создаём танк игрока
-        this.createPlayer();
+        this.createPlayer(state);
 
         // Создаём базу
         this.createBase();
     }
     
-    createMap() {
-
-        // Сетка для отладки
-        // this.createDebugGrid();
-        
-        // this.createEnemies();
-
-        // Создаём препятствия по конфигурации
-        this.createObstacles();
-        
-    }
 
     createDebugGrid() {    
         const grid = new PIXI.Graphics();
@@ -322,23 +319,49 @@ export class Game {
         });
     }
 
-    createPlayer() {
-        const { tileSize, playerStart } = this.mapConfig;
+    createPlayer(state) {
+        const { player1, player2 } = state;
 
-        const [x, y] = playerStart;
+        // const { tileSize, playerStart } = this.mapConfig;
+
+        // const [x, y] = playerStart;
 
         // Ставим игрока в безопасное место (рядом с низом)
         this.playerTank = new Tank(this.textures.playerTankUp1, 
-                                  x * tileSize, 
-                                  y * tileSize, 
+                                //   x * tileSize, 
+                                //   y * tileSize,
+                                player1.x,
+                                player1.y, 
                                   true);
-
-        this.playerTank.textures = this.textures;
 
         // Устанавливаем текстуры для анимации
         this.playerTank.setTextures(this.textures);
         
+        this.playerTank.direction = player1.direction;
+
+
         this.app.stage.addChild(this.playerTank.sprite);
+
+        this.playerTank.updateSpriteByDirection();
+
+
+        // const x = 17;
+        // const y = 25;
+
+        // console.log(x * tileSize, y * tileSize)
+
+        this.playerTank2 = new Tank(this.textures.playerTankUp1, 
+                                  player2.x, 
+                                  player2.y,
+                                // player1.x,
+                                // player1.y, 
+                                  true, 'playerTank2');
+        this.playerTank2.direction = player2.direction;
+
+        this.playerTank2.setTextures(this.textures);
+        this.app.stage.addChild(this.playerTank2.sprite);
+        this.playerTank2.updateSpriteByDirection();
+
     }
 
     createBase() {
@@ -372,12 +395,24 @@ export class Game {
     }
     
     playerShoot() {
-        if (!this.playerTank || this.playerTank.isDestroyed) return;
-        
-        const bullet = this.playerTank.shoot(this.textures.bullet);
-        if (bullet) {
-            this.app.stage.addChild(bullet.sprite);
-            this.bullets.push(bullet);
+        if (this.player == '1') {
+            if (!this.playerTank || this.playerTank.isDestroyed) return;
+            
+            const bullet = this.playerTank.shoot(this.textures.bullet);
+            if (bullet) {
+                this.app.stage.addChild(bullet.sprite);
+                this.bullets.push(bullet);
+            }
+        }
+
+        if (this.player == '2') {
+            if (!this.playerTank2 || this.playerTank2.isDestroyed) return;
+            
+            const bullet = this.playerTank2.shoot(this.textures.bullet);
+            if (bullet) {
+                this.app.stage.addChild(bullet.sprite);
+                this.bullets.push(bullet);
+            }
         }
     }
     
@@ -477,39 +512,93 @@ updateEnemies() {
             allObstacles.push(this.base);
         }
         
-        if (this.keysPressed['w'] || this.keysPressed['arrowup']) {
-            moved = this.playerTank.move('up', allObstacles);
-        }
-        if (this.keysPressed['s'] || this.keysPressed['arrowdown']) {
-            moved = this.playerTank.move('down', allObstacles);
-        }
-        if (this.keysPressed['a'] || this.keysPressed['arrowleft']) {
-            moved = this.playerTank.move('left', allObstacles);
-        }
-        if (this.keysPressed['d'] || this.keysPressed['arrowright']) {
-            moved = this.playerTank.move('right', allObstacles);
-        }
-        
-        // Проверяем границы экрана
-        const boundsCheck = CollisionSystem.checkBoundaryCollision(
-            this.playerTank.sprite, 
-            this.gameBounds
-        );
-        
-        if (boundsCheck.left || boundsCheck.right || boundsCheck.top || boundsCheck.bottom) {
-            // Отталкиваем от границы
-            if (boundsCheck.left) this.playerTank.sprite.x = this.gameBounds.x + this.playerTank.sprite.width * this.playerTank.sprite.anchor.x;
-            if (boundsCheck.right) this.playerTank.sprite.x = this.gameBounds.width - this.playerTank.sprite.width * (1 - this.playerTank.sprite.anchor.x);
-            if (boundsCheck.top) this.playerTank.sprite.y = this.gameBounds.y + this.playerTank.sprite.height * this.playerTank.sprite.anchor.y;
-            if (boundsCheck.bottom) this.playerTank.sprite.y = this.gameBounds.height - this.playerTank.sprite.height * (1 - this.playerTank.sprite.anchor.y);
+        if (this.player == '1') {
+            if (this.keysPressed['w'] || this.keysPressed['arrowup']) {
+                moved = this.playerTank.move('up', allObstacles);
+            }
+            if (this.keysPressed['s'] || this.keysPressed['arrowdown']) {
+                moved = this.playerTank.move('down', allObstacles);
+            }
+            if (this.keysPressed['a'] || this.keysPressed['arrowleft']) {
+                moved = this.playerTank.move('left', allObstacles);
+            }
+            if (this.keysPressed['d'] || this.keysPressed['arrowright']) {
+                moved = this.playerTank.move('right', allObstacles);
+            }
+
+                        // Проверяем границы экрана
+            const boundsCheck = CollisionSystem.checkBoundaryCollision(
+                this.playerTank.sprite, 
+                this.gameBounds
+            );
             
-            this.playerTank.updateHitbox();
+            if (boundsCheck.left || boundsCheck.right || boundsCheck.top || boundsCheck.bottom) {
+                // Отталкиваем от границы
+                if (boundsCheck.left) this.playerTank.sprite.x = this.gameBounds.x + this.playerTank.sprite.width * this.playerTank.sprite.anchor.x;
+                if (boundsCheck.right) this.playerTank.sprite.x = this.gameBounds.width - this.playerTank.sprite.width * (1 - this.playerTank.sprite.anchor.x);
+                if (boundsCheck.top) this.playerTank.sprite.y = this.gameBounds.y + this.playerTank.sprite.height * this.playerTank.sprite.anchor.y;
+                if (boundsCheck.bottom) this.playerTank.sprite.y = this.gameBounds.height - this.playerTank.sprite.height * (1 - this.playerTank.sprite.anchor.y);
+                
+                this.playerTank.updateHitbox();
+            }
+
+            if (moved) {
+                const { direction, sprite } = this.playerTank;
+
+                this.socket.emit('tank-update1', { direction, x: sprite.x, y: sprite.y })
+                // console.log(this.playerTank)
+            }
+            
+            // Если танк не двигался в этом кадре, останавливаем анимацию
+            if (!moved && this.playerTank.isMoving) {
+                this.playerTank.stopAnimation();
+            }
+        }
+
+        if (this.player == '2') {
+            if (this.keysPressed['w'] || this.keysPressed['arrowup']) {
+                moved = this.playerTank2.move('up', allObstacles);
+            }
+            if (this.keysPressed['s'] || this.keysPressed['arrowdown']) {
+                moved = this.playerTank2.move('down', allObstacles);
+            }
+            if (this.keysPressed['a'] || this.keysPressed['arrowleft']) {
+                moved = this.playerTank2.move('left', allObstacles);
+            }
+            if (this.keysPressed['d'] || this.keysPressed['arrowright']) {
+                moved = this.playerTank2.move('right', allObstacles);
+            }
+
+                        // Проверяем границы экрана
+            const boundsCheck = CollisionSystem.checkBoundaryCollision(
+                this.playerTank2.sprite, 
+                this.gameBounds
+            );
+            
+            if (boundsCheck.left || boundsCheck.right || boundsCheck.top || boundsCheck.bottom) {
+                // Отталкиваем от границы
+                if (boundsCheck.left) this.playerTank2.sprite.x = this.gameBounds.x + this.playerTank2.sprite.width * this.playerTank2.sprite.anchor.x;
+                if (boundsCheck.right) this.playerTank2.sprite.x = this.gameBounds.width - this.playerTank2.sprite.width * (1 - this.playerTank2.sprite.anchor.x);
+                if (boundsCheck.top) this.playerTank2.sprite.y = this.gameBounds.y + this.playerTank2.sprite.height * this.playerTank2.sprite.anchor.y;
+                if (boundsCheck.bottom) this.playerTank2.sprite.y = this.gameBounds.height - this.playerTank2.sprite.height * (1 - this.playerTank2.sprite.anchor.y);
+                
+                this.playerTank2.updateHitbox();
+            }
+
+            if (moved) {
+                const { direction, sprite } = this.playerTank2;
+
+                this.socket.emit('tank-update2', { direction, x: sprite.x, y: sprite.y })
+                // console.log(this.playerTank)
+            }
+            
+            // Если танк не двигался в этом кадре, останавливаем анимацию
+            if (!moved && this.playerTank2.isMoving) {
+                this.playerTank2.stopAnimation();
+            }
         }
         
-        // Если танк не двигался в этом кадре, останавливаем анимацию
-        if (!moved && this.playerTank.isMoving) {
-            this.playerTank.stopAnimation();
-        }
+
     }
 
     updateBullets() {
@@ -545,6 +634,11 @@ updateEnemies() {
             if (!hitSomething && i < this.bullets.length && this.bullets[i] === bullet) {
                 this.checkBulletBoundaries(bullet, i);
             }
+
+            // TODO
+            // if (hitSomething) {
+            //     this.mapGrid[y][x]
+            // }
 
             if (bullet.isPlayer) {
                 for (let j = this.enemies.length - 1; j >= 0; j--) {

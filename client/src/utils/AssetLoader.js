@@ -15,9 +15,26 @@ export class AssetLoader {
             playerTankDown2: this.extractTexture(spritesheet, 16*5, 0, 15, 15),      // Желтый танк вниз 2
             playerTankRight1: this.extractTexture(spritesheet, 16*6, 0, 15, 15),       // Желтый танк вправо 1
             playerTankRight2: this.extractTexture(spritesheet, 16*7, 0, 15, 15),       // Желтый танк вправо 2
-
             playerTank: this.extractTexture(spritesheet, 0, 0, 16, 16),             // Желтый танк по умолчанию
-            playerTank2: this.extractTexture(spritesheet, 16, 0, 16, 16),             // Зеленый танк игрока 2
+            
+// -------
+
+            playerTank2Up1: this.extractTexture(spritesheet, 0, 16*8, 15, 15),           // Желтый танк вверх 1
+            playerTank2Up2: this.extractTexture(spritesheet, 16, 16*8, 15, 15),          // Желтый танк вверх 2
+            playerTank2Left1: this.extractTexture(spritesheet, 16*2, 16*8, 15, 15),         // Желтый танк влево 1
+            playerTank2Left2: this.extractTexture(spritesheet, 16*3, 16*8, 15, 15),         // Желтый танк влево 2
+            playerTank2Down1: this.extractTexture(spritesheet, 16*4, 16*8, 15, 15),      // Желтый танк вниз 1
+            playerTank2Down2: this.extractTexture(spritesheet, 16*5, 16*8, 15, 15),      // Желтый танк вниз 2
+            playerTank2Right1: this.extractTexture(spritesheet, 16*6, 16*8, 15, 15),       // Желтый танк вправо 1
+            playerTank2Right2: this.extractTexture(spritesheet, 16*7, 16*8, 15, 15),       // Желтый танк вправо 2
+            playerTank2: this.extractTexture(spritesheet, 0, 16*8, 16, 16),             // Желтый танк по умолчанию
+            
+
+
+
+
+            // playerTank2: this.extractTexture(spritesheet, 16, 0, 16, 16),             // Зеленый танк игрока 2
+
             enemyTankBasic: this.extractTexture(spritesheet, 16*8, 0, 16, 16),    // Серый базовый враг (строка 1)
             enemyTankFast: this.extractTexture(spritesheet, 16*8, 16, 16, 16),    // Серый быстрый враг (строка 2)
             enemyTankPower: this.extractTexture(spritesheet, 16*8, 16*2, 16, 16), // Серый сильный враг (строка 3)

@@ -3,7 +3,9 @@ import * as PIXI from 'pixi.js';
 import { CollisionSystem } from '../utils/CollisionSystem.js';
 
 export class Tank {
-constructor(texture, x = 100, y = 100, isPlayer = true) {
+constructor(texture, x = 100, y = 100, isPlayer = true, skin = 'playerTank') {
+        this.skin = skin;
+
         this.sprite = new PIXI.Sprite(texture);
         this.sprite.x = x;
         this.sprite.y = y;
@@ -329,7 +331,7 @@ getObstacleBounds(obstacle) {
         if (!this.textures || Object.keys(this.textures).length === 0) return;
         
         // console.log('>> ', this.direction)
-        const textureKey = `playerTank${this.capitalizeFirst(this.direction)}${this.animationFrame}`;
+        const textureKey = `${this.skin}${this.capitalizeFirst(this.direction)}${this.animationFrame}`;
         
         if (this.textures[textureKey]) {
             this.sprite.texture = this.textures[textureKey];
