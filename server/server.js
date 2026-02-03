@@ -62,12 +62,13 @@ const newGame = () => {
             [22, 16], [22, 17], [22, 18], [22, 19], [22, 20], [22, 21], [22, 22], [22, 23],
             [23, 16], [23, 17], [23, 18], [23, 19], [23, 20], [23, 21], [23, 22], [23, 23],
 
+            // вокруг базы
+            [11, 25], [11, 24], [11, 23], [12, 23], [13, 23], [14, 23], [14, 24], [14, 25]
         ],    
     }
 }
 
 const games = {};
-
 
 io.on("connection", async (socket) => {
     const { gameId, playerColor, uid } = socket.handshake.query;
@@ -94,8 +95,16 @@ io.on("connection", async (socket) => {
         // console.log('tank-update ', data);
     })
 
-    socket.on('bricks-update', (data) => {
-        games[gameId].bricks = data;
+    socket.on('brick-destroyed', (data) => {
+        console.log("brick-destroyed", data);
+        
+        // Находим и удаляем кирпич из массива
+        games[gameId].bricks = games[gameId].bricks.filter(
+            brick => !(brick[0] === data.gridX && brick[1] === data.gridY)
+        );
+        
+        // Транслируем остальным игрокам
+        socket.to(gameId).emit('brick-destroyed', data);
     })
 
     // setInterval(() => {

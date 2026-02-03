@@ -128,6 +128,24 @@ export class Game {
                 this.interpolateTankPosition(this.playerTank, data);
             }
         });
+
+        // Обработка уничтожения кирпича от другого игрока
+        this.socket.on('brick-destroyed', (data) => {
+            const { tileSize } = this.mapConfig;
+            const x = data.gridX * tileSize;
+            const y = data.gridY * tileSize;
+            
+            // Находим и удаляем препятствие
+            const obstacle = this.getObstacleAt(x, y);
+            if (obstacle) {
+                this.mapGrid[data.gridY][data.gridX] = null;
+                const index = this.obstacles.indexOf(obstacle);
+                if (index !== -1) {
+                    this.obstacles.splice(index, 1);
+                    obstacle.destroy();
+                }
+            }
+        });
     }
 
     interpolateTankPosition(tank, data) {
@@ -206,7 +224,6 @@ export class Game {
         // Создаём базу
         this.createBase();
     }
-    
 
     createDebugGrid() {    
         const grid = new PIXI.Graphics();
@@ -251,12 +268,11 @@ export class Game {
         this.app.stage.addChild(grid);
     }
 
-
-    createObstacles() {
+    createObstacles(state) {
         const { tileSize, bricks, steels } = this.mapConfig;
         
         // Создаём кирпичные стены из конфигурации
-        bricks.forEach(([gridX, gridY]) => {
+        state.bricks.forEach(([gridX, gridY]) => {
             this.addObstacle('brick', gridX * tileSize, gridY * tileSize);
         });
         
@@ -266,7 +282,6 @@ export class Game {
         });
     }
 
- 
     addObstacle(type, x, y) {
         const { tileSize, mapWidth, mapHeight } = this.mapConfig;
         
@@ -316,18 +331,18 @@ export class Game {
     }
 
     // Удаление препятствия из сетки
-    removeObstacleFromGrid(x, y) {
-        const { tileSize } = this.mapConfig;
-        const gridX = Math.floor(x / tileSize);
-        const gridY = Math.floor(y / tileSize);
+    // removeObstacleFromGrid(x, y) {
+    //     const { tileSize } = this.mapConfig;
+    //     const gridX = Math.floor(x / tileSize);
+    //     const gridY = Math.floor(y / tileSize);
         
-        if (gridX >= 0 && gridX < this.mapGrid[0].length && 
-            gridY >= 0 && gridY < this.mapGrid.length) {
-            this.mapGrid[gridY][gridX] = null;
-            return true;
-        }
-        return false;
-    }
+    //     if (gridX >= 0 && gridX < this.mapGrid[0].length && 
+    //         gridY >= 0 && gridY < this.mapGrid.length) {
+    //         this.mapGrid[gridY][gridX] = null;
+    //         return true;
+    //     }
+    //     return false;
+    // }
 
     // Получение препятствия по координатам
     getObstacleAt(x, y) {
@@ -674,6 +689,7 @@ updateEnemies() {
             // Если пуля попала во что-то, она удаляется в checkBulletObstacleCollision
             const hitSomething = this.checkBulletObstacleCollision(bullet, i);
             
+            
             // Если пуля ещё существует (не попала в препятствие), проверяем границы
 
             if (!hitSomething && i < this.bullets.length && this.bullets[i] === bullet) {
@@ -791,10 +807,15 @@ checkBulletObstacleCollision(bullet, bulletIndex) {
             const destroyed = obstacle.takeDamage(1, bullet.direction);
             this.removeBullet(bullet, bulletIndex);
 
+            
             if (destroyed) {
                 // Удаляем из сетки карты
                 this.mapGrid[y - 1][x - 1] = null;
-
+                this.socket.emit("brick-destroyed", { 
+                    gridX: x - 1, 
+                    gridY: y - 1 
+                });
+                
                 // Удаляем из массива препятствий
                 const obstacleIndex = this.obstacles.indexOf(obstacle);
                 if (obstacleIndex !== -1) {
@@ -805,6 +826,7 @@ checkBulletObstacleCollision(bullet, bulletIndex) {
         }
 
         if (hitSomething) {
+            
             return true;
         }
         // Проверяем коллизию с базой
