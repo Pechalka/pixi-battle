@@ -65,6 +65,7 @@ const newGame = () => {
             // вокруг базы
             [11, 25], [11, 24], [11, 23], [12, 23], [13, 23], [14, 23], [14, 24], [14, 25]
         ],    
+        bullets: [], // пули
     }
 }
 
@@ -107,11 +108,10 @@ io.on("connection", async (socket) => {
         socket.to(gameId).emit('brick-destroyed', data);
     })
 
-    // setInterval(() => {
-        // socket.emit('game-state', state);
+    setInterval(() => {
+        socket.emit('game-state', state); // на каждую игру делать новый интервал
 
-    // }, 1000 / 60);
-
+    }, 1000 / 60);
 })
 
 app.get('/api/games', (req, res) => {
