@@ -110,6 +110,42 @@ export class Game {
 
 // console.log('Game constructor');
         this.init();
+        this.setupSocketListeners();
+
+    }
+
+    setupSocketListeners() {
+        this.socket.on('tank-update2', (data) => {
+            if (this.player === '1' && this.playerTank2) {
+                // Плавная интерполяция позиции
+                this.interpolateTankPosition(this.playerTank2, data);
+            }
+        });
+        
+        // Получаем обновления позиции танка 1 от сервера
+        this.socket.on('tank-update1', (data) => {
+            if (this.player === '2' && this.playerTank) {
+                this.interpolateTankPosition(this.playerTank, data);
+            }
+        });
+    }
+
+    interpolateTankPosition(tank, data) {
+        // const targetX = data.x;
+        // const targetY = data.y;
+        // const targetDirection = data.direction;
+        
+        // // Обновляем направление
+        // if (tank.direction !== targetDirection) {
+        //     tank.direction = targetDirection;
+        //     tank.updateSpriteByDirection();
+        // }
+        
+        // // Плавное движение к цели
+        // tank.sprite.x = targetX;
+        // tank.sprite.y = targetY;
+        // tank.updateHitbox();
+        tank.remoteUpdate(data);
     }
     
     async init() {
@@ -553,6 +589,10 @@ updateEnemies() {
             if (!moved && this.playerTank.isMoving) {
                 this.playerTank.stopAnimation();
             }
+
+            if (this.playerTank2.lastPos && this.playerTank2.lastPos.y == this.playerTank2.sprite.y && this.playerTank2.lastPos.x == this.playerTank2.sprite.x) {
+                this.playerTank2.stopAnimation();
+            }
         }
 
         if (this.player == '2') {
@@ -596,6 +636,11 @@ updateEnemies() {
             if (!moved && this.playerTank2.isMoving) {
                 this.playerTank2.stopAnimation();
             }
+
+            if (this.playerTank.lastPos && this.playerTank.lastPos.y == this.playerTank.sprite.y && this.playerTank.lastPos.x == this.playerTank.sprite.x) {
+                this.playerTank.stopAnimation();
+            }
+
         }
         
 

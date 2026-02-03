@@ -84,12 +84,14 @@ io.on("connection", async (socket) => {
 
     socket.on('tank-update1', (data) => {
         games[gameId].player1 = data;
-        console.log('tank-update ', data);
+        socket.to(gameId).emit('tank-update1', data);
+        // console.log('tank-update ', data);
     })
 
     socket.on('tank-update2', (data) => {
         games[gameId].player2 = data;
-        console.log('tank-update ', data);
+        socket.to(gameId).emit('tank-update2', data);
+        // console.log('tank-update ', data);
     })
 
     socket.on('bricks-update', (data) => {

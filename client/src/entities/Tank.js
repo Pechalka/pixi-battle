@@ -42,7 +42,45 @@ constructor(texture, x = 100, y = 100, isPlayer = true, skin = 'playerTank') {
         this.animationFrame = 1;
         this.animationTimer = null;
         this.isMoving = false;
+
+        
         this.textures = {}; // Будет заполнен извне
+    }
+
+     remoteUpdate(data) {
+        if (this.isDestroyed) return;
+        
+        // Определяем, движется ли танк (сравниваем с предыдущей позицией)
+        const prevX = this.sprite.x;
+        const prevY = this.sprite.y;
+        
+        this.direction = data.direction;
+        
+        // Обновляем позицию
+        this.sprite.x = data.x;
+        this.sprite.y = data.y;
+        
+        // Определяем, движется ли танк
+        const isMovingNow = prevX !== data.x || prevY !== data.y;
+        
+        // console.log('isMovingNow ', isMovingNow);
+
+        if (isMovingNow && !this.isMoving) {
+            // Танк начал движение
+            this.startAnimation();
+        } else if (!isMovingNow && this.isMoving) {
+            // Танк остановился
+            this.stopAnimation();
+        }
+        
+        // Всегда обновляем спрайт
+        this.updateSpriteByDirection();
+        this.updateHitbox();
+
+        this.lastPos = {
+            x: this.sprite.x,
+            y: this.sprite.y
+        }
     }
 
     // Обновляем хитбокс при движении
@@ -296,6 +334,8 @@ getObstacleBounds(obstacle) {
     
     // Запуск анимации
     startAnimation() {
+        if (this.isMoving) return;
+        
         this.isMoving = true;
         this.animate();
     }
@@ -327,10 +367,8 @@ getObstacleBounds(obstacle) {
     
 // Обновление спрайта в зависимости от направления
     updateSpriteByDirection() {
-        // console.log(this.textures)
         if (!this.textures || Object.keys(this.textures).length === 0) return;
         
-        // console.log('>> ', this.direction)
         const textureKey = `${this.skin}${this.capitalizeFirst(this.direction)}${this.animationFrame}`;
         
         if (this.textures[textureKey]) {
