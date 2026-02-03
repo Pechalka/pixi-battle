@@ -7,10 +7,24 @@ export class AssetLoader {
         const textures = {
             // ТАНКИ (16x16 пикселей)
             // Игрок 1 (желтый танк) - анимация
-            playerTankUp: [this.extractTexture(spritesheet, 0, 0, 15, 15), this.extractTexture(spritesheet, 16, 0, 15, 15)],
-            playerTankLeft: [this.extractTexture(spritesheet, 16 * 2, 0, 15, 15), this.extractTexture(spritesheet, 16 * 3, 0, 15, 15)],  
-            playerTankDown: [this.extractTexture(spritesheet, 16 * 4, 0, 15, 15), this.extractTexture(spritesheet, 16 * 5, 0, 15, 15)],
-            playerTankRight: [this.extractTexture(spritesheet, 16 * 6, 0, 15, 15), this.extractTexture(spritesheet, 16 * 7, 0, 15, 15)],
+            player:{
+                up: [this.extractTexture(spritesheet, 0, 0, 15, 15), this.extractTexture(spritesheet, 16, 0, 15, 15)],
+                left: [this.extractTexture(spritesheet, 16 * 2, 0, 15, 15), this.extractTexture(spritesheet, 16 * 3, 0, 15, 15)],  
+                down: [this.extractTexture(spritesheet, 16 * 4, 0, 15, 15), this.extractTexture(spritesheet, 16 * 5, 0, 15, 15)],
+                right: [this.extractTexture(spritesheet, 16 * 6, 0, 15, 15), this.extractTexture(spritesheet, 16 * 7, 0, 15, 15)],
+            },
+            secondPlayer:{
+                up: [this.extractTexture(spritesheet, 0, 0, 15, 15), this.extractTexture(spritesheet, 16, 0, 15, 15)],
+                left: [this.extractTexture(spritesheet, 16 * 2, 0, 15, 15), this.extractTexture(spritesheet, 16 * 3, 0, 15, 15)],
+                down: [this.extractTexture(spritesheet, 16 * 4, 0, 15, 15), this.extractTexture(spritesheet, 16 * 5, 0, 15, 15)],
+                right: [this.extractTexture(spritesheet, 16 * 6, 0, 15, 15), this.extractTexture(spritesheet, 16 * 7, 0, 15, 15)],
+            },
+            enemy:{
+                up: [this.extractTexture(spritesheet, 16 * 8, 0, 15, 15), this.extractTexture(spritesheet, 16 * 9, 0, 15, 15)],
+                left: [this.extractTexture(spritesheet, 16 * 10, 0, 15, 15), this.extractTexture(spritesheet, 16 * 11, 0, 15, 15)],
+                down: [this.extractTexture(spritesheet, 16 * 12, 0, 15, 15), this.extractTexture(spritesheet, 16 * 13, 0, 15, 15)],
+                right: [this.extractTexture(spritesheet, 16 * 14, 0, 15, 15), this.extractTexture(spritesheet, 16 * 15, 0, 15, 15)],
+            },
 
             playerTank: this.extractTexture(spritesheet, 0, 0, 16, 16),             // Желтый танк по умолчанию
             playerTank2: this.extractTexture(spritesheet, 16, 0, 16, 16),             // Зеленый танк игрока 2

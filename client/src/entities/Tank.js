@@ -1,14 +1,20 @@
 // game/entities/Tank.js
+import { AssetLoader } from '../utils/AssetLoader.js';
 import * as PIXI from 'pixi.js';
 import { CollisionSystem } from '../utils/CollisionSystem.js';
 
 export class Tank {
-    constructor(textures, x = 100, y = 100, isPlayer = true) {
-        this.textures = textures; // Store all textures
+    constructor(role, x = 100, y = 100, isPlayer = true) {
+        // this.textures = [PIXI.Texture.EMPTY];
+        // this.textures = textures; // Store all textures
+        // console.log('Tank textures:', textures);
+        this.textures = AssetLoader.loadAssets();
+        // this.sprite = new PIXI.AnimatedSprite([PIXI.Texture.EMPTY]);
+
 
         // Ensure we have the initial textures
-        const initialTextures = this.textures.playerTankUp || [PIXI.Texture.EMPTY];
-        this.sprite = new PIXI.AnimatedSprite(initialTextures);
+        // const initialTextures = this.textures.playerTankUp || [PIXI.Texture.EMPTY];
+        this.sprite = new PIXI.AnimatedSprite(this.textures[role]);
 
         this.sprite.animationSpeed = 0.1;
         this.sprite.x = x;
@@ -44,6 +50,13 @@ export class Tank {
 
         this.isMoving = false;
     }
+
+    // async init() {
+        
+    //     this.sprite = new PIXI.AnimatedSprite(this.textures[role]);
+    // }
+
+    // this.init()
 
     // Update hitbox
     updateHitbox() {

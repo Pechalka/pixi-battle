@@ -126,6 +126,7 @@ export class Game {
 
             // 2. Загружаем ресурсы
             this.textures = await AssetLoader.loadAssets();
+            await AssetLoader.loadAssets();
 
             // 3. Инициализируем сетку карты 
             this.initMapGrid();
@@ -326,7 +327,7 @@ export class Game {
         const [x, y] = playerStart;
 
         // Ставим игрока в безопасное место (рядом с низом)
-        this.playerTank = new Tank(this.textures,
+        this.playerTank = new Tank("player",
             x * tileSize,
             y * tileSize,
             true,
@@ -690,8 +691,7 @@ export class Game {
         }
     }
 
-    removeBullet(bullet, index) {
-        
+    removeBullet(bullet, index) {        
         this.createExplosion(bullet);
 
         if (bullet.sprite && bullet.sprite.parent) {
