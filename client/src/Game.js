@@ -130,12 +130,11 @@ export class Game {
         });
 
         // Обработка уничтожения кирпича от другого игрока
-        this.socket.on('brick-destroyed', (data) => {
+         this.socket.on('brick-destroyed', (data) => {
             const { tileSize } = this.mapConfig;
             const x = data.gridX * tileSize;
             const y = data.gridY * tileSize;
             
-            // Находим и удаляем препятствие
             const obstacle = this.getObstacleAt(x, y);
             if (obstacle) {
                 this.mapGrid[data.gridY][data.gridX] = null;
@@ -145,6 +144,49 @@ export class Game {
                     obstacle.destroy();
                 }
             }
+        });
+
+        this.socket.on('brick-damaged', (data) => {
+            const { tileSize } = this.mapConfig;
+            const x = data.gridX * tileSize;
+            const y = data.gridY * tileSize;
+            
+            // Находим препятствие
+            const obstacle = this.getObstacleAt(x, y);
+            if (obstacle && obstacle.type === 'brick') {
+                // Устанавливаем поврежденное состояние
+                obstacle.setDamaged(true);
+                
+                // Обновляем здоровье
+                if (data.health !== undefined) {
+                    obstacle.health = data.health;
+                }
+            }
+        });
+
+        this.socket.on('bullet-created', data => {
+            const bullet = {
+                sprite: new PIXI.Sprite(this.textures.bullet),
+                direction: data.direction,
+                speed: 4, // должно совпадать со скоростью локальных пуль
+                isDestroyed: false,
+                isPlayer: data.isPlayer || false, // важно для определения чья пуля
+                
+                // Добавляем методы для совместимости
+                getBounds() {
+                    return this.sprite.getBounds();
+                }
+            };
+            
+            // Настраиваем спрайт
+            bullet.sprite.x = data.x;
+            bullet.sprite.y = data.y;
+            bullet.sprite.anchor.set(0.5);
+            bullet.sprite.scale.set(1.5);
+            
+            // Добавляем в массив пуль и на сцену
+            this.bullets.push(bullet);
+            this.app.stage.addChild(bullet.sprite);       
         });
     }
 
@@ -269,9 +311,8 @@ export class Game {
     }
 
     createObstacles(state) {
-        const { tileSize, bricks, steels } = this.mapConfig;
+        const { tileSize, steels } = this.mapConfig;
         
-        // Создаём кирпичные стены из конфигурации
         state.bricks.forEach(([gridX, gridY]) => {
             this.addObstacle('brick', gridX * tileSize, gridY * tileSize);
         });
@@ -446,10 +487,11 @@ export class Game {
     }
     
     playerShoot() {
+        let bullet = null;
         if (this.player == '1') {
             if (!this.playerTank || this.playerTank.isDestroyed) return;
-            
-            const bullet = this.playerTank.shoot(this.textures.bullet);
+
+            bullet = this.playerTank.shoot(this.textures.bullet);
             if (bullet) {
                 this.app.stage.addChild(bullet.sprite);
                 this.bullets.push(bullet);
@@ -458,13 +500,15 @@ export class Game {
 
         if (this.player == '2') {
             if (!this.playerTank2 || this.playerTank2.isDestroyed) return;
-            
-            const bullet = this.playerTank2.shoot(this.textures.bullet);
+
+            bullet = this.playerTank2.shoot(this.textures.bullet);
             if (bullet) {
                 this.app.stage.addChild(bullet.sprite);
                 this.bullets.push(bullet);
             }
         }
+        
+        this.socket.emit('player-shoot', {x: bullet.sprite.x, y: bullet.sprite.y, direction: bullet.direction}); 
     }
     
     startGameLoop() {
@@ -478,7 +522,6 @@ export class Game {
             this.gameOver();
             return;
         }
-        
         // Обновляем игрока
         this.updatePlayer();
 
@@ -750,9 +793,8 @@ checkBulletObstacleCollision(bullet, bulletIndex) {
 
         // 1. Определяем центральную клетку попадания
         const centerGridX = Math.round(bulletX / tileSize);
-        // console.log("centerGridX:", centerGridX);
         const centerGridY = Math.round(bulletY / tileSize);
-        // console.log("centerGridY:", centerGridY);
+
         // 2. Определяем смещение внутри клетки (0-31)
         const offsetX = bulletX % tileSize;
         const offsetY = bulletY % tileSize;
