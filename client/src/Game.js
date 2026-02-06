@@ -115,37 +115,68 @@ export class Game {
     }
 
     setupSocketListeners() {
-        this.socket.on('tank-update2', (data) => {
-            if (this.player === '1' && this.playerTank2) {
-                // Плавная интерполяция позиции
-                this.interpolateTankPosition(this.playerTank2, data);
-            }
-        });
+        // this.socket.on('tank-update2', (data) => {
+        //     if (this.player === '1' && this.playerTank2) {
+        //         // Плавная интерполяция позиции
+        //         this.interpolateTankPosition(this.playerTank2, data);
+        //     }
+        // });
         
-        // Получаем обновления позиции танка 1 от сервера
-        this.socket.on('tank-update1', (data) => {
-            if (this.player === '2' && this.playerTank) {
-                this.interpolateTankPosition(this.playerTank, data);
-            }
-        });
+        // // Получаем обновления позиции танка 1 от сервера
+        // this.socket.on('tank-update1', (data) => {
+        //     if (this.player === '2' && this.playerTank) {
+        //         this.interpolateTankPosition(this.playerTank, data);
+        //     }
+        // });
+
+        this.socket.on('game-state', (data) => {
+            // console.log('>>> ', data);
+
+            this.interpolateTankPosition(this.playerTank2, data.player2);
+            this.interpolateTankPosition(this.playerTank, data.player1);
+
+            this.updateLocalBulletsState(data);
+        })
+
+        this.socket.on('obstacles-hit', data => {    
+            console.log('obstacles-hit ', data);
+
+            data.forEach(o => {
+                if (o.type == 'base_destroyed') {
+                    // const destroyed = this.base.takeDamage(1);
+                    // console.log('destroyed ', destroyed);
+                    // this.base.isDestroyed = true;
+                    this.base.replaceWithDestroyed();
+                    this.gameOver();
+
+                } else if (this.mapGrid[o.y][o.x] && this.mapGrid[o.y][o.x].obstacle) {
+                    // this.mapGrid[o.y][o.x].obstacle.takeDamage(1);
+                    const obstacle = this.mapGrid[o.y][o.x].obstacle;
+                    if (o.type === 'damaged') {
+                        obstacle.takeDamage(1, o.direction);
+                    }
+                    // const destroyed = obstacle.takeDamage(1, o.direction);
+
+                    if (o.type === 'destroyed') {
+                        obstacle.takeDamage(1, o.direction);
+                        // Удаляем из сетки карты
+                        this.mapGrid[o.y][o.x] = null;
+
+                        // Удаляем из массива препятствий
+                        const obstacleIndex = this.obstacles.indexOf(obstacle);
+                        if (obstacleIndex !== -1) {
+                            this.obstacles.splice(obstacleIndex, 1);
+                        }
+                    }
+
+                }
+            })
+        })
+        
     }
 
     interpolateTankPosition(tank, data) {
-        // const targetX = data.x;
-        // const targetY = data.y;
-        // const targetDirection = data.direction;
-        
-        // // Обновляем направление
-        // if (tank.direction !== targetDirection) {
-        //     tank.direction = targetDirection;
-        //     tank.updateSpriteByDirection();
-        // }
-        
-        // // Плавное движение к цели
-        // tank.sprite.x = targetX;
-        // tank.sprite.y = targetY;
-        // tank.updateHitbox();
-        tank.remoteUpdate(data);
+        if (tank) tank.remoteUpdate(data);
     }
     
     async init() {
@@ -155,6 +186,9 @@ export class Game {
             // 1. Создаём приложение PixiJS
             this.app = new PIXI.Application();
             
+            console.log('this.gameBounds.width ', this.gameBounds.width);
+            console.log('this.gameBounds.height ', this.gameBounds.height);
+
             await this.app.init({
                 canvas: this.canvas,
                 width: this.gameBounds.width,
@@ -174,6 +208,8 @@ export class Game {
             this.socket.emit('start');
 
             this.socket.on('game-init', state => {
+                if (!state) return;
+
                 this.createGame(state);
                 this.startGameLoop();
             })
@@ -252,18 +288,41 @@ export class Game {
     }
 
 
-    createObstacles() {
-        const { tileSize, bricks, steels } = this.mapConfig;
+    createObstacles(state) {
+        const { tileSize } = this.mapConfig;
+        const { mapGrid } = state;
+
+        for(let y=0; y < mapGrid.length; y++) {
+            for(let x=0; x < mapGrid[y].length; x++) {
+                if (mapGrid[y][x]) {
+                    if (mapGrid[y][x].type == 'brick') {
+
+                        const o = this.addObstacle('brick', x * tileSize, y * tileSize);
+                        if (mapGrid[y][x].direction) {
+                            o.takeDamage(1, mapGrid[y][x].direction)
+                        }
+                    }
+
+                    if (mapGrid[y][x].type == 'steel') {
+                        this.addObstacle('steel', x * tileSize, y * tileSize);
+                    }
+                    
+                }
+            }
+        }
+        // console.log('state ', state);
+
+        // const { tileSize, bricks, steels } = this.mapConfig;
         
-        // Создаём кирпичные стены из конфигурации
-        bricks.forEach(([gridX, gridY]) => {
-            this.addObstacle('brick', gridX * tileSize, gridY * tileSize);
-        });
+        // // Создаём кирпичные стены из конфигурации
+        // bricks.forEach(([gridX, gridY]) => {
+        //     this.addObstacle('brick', gridX * tileSize, gridY * tileSize);
+        // });
         
-        // Создаём стальные стены из конфигурации
-        steels.forEach(([gridX, gridY]) => {
-            this.addObstacle('steel', gridX * tileSize, gridY * tileSize);
-        });
+        // // Создаём стальные стены из конфигурации
+        // steels.forEach(([gridX, gridY]) => {
+        //     this.addObstacle('steel', gridX * tileSize, gridY * tileSize);
+        // });
     }
 
  
@@ -358,14 +417,8 @@ export class Game {
     createPlayer(state) {
         const { player1, player2 } = state;
 
-        // const { tileSize, playerStart } = this.mapConfig;
-
-        // const [x, y] = playerStart;
-
         // Ставим игрока в безопасное место (рядом с низом)
         this.playerTank = new Tank(this.textures.playerTankUp1, 
-                                //   x * tileSize, 
-                                //   y * tileSize,
                                 player1.x,
                                 player1.y, 
                                   true);
@@ -380,17 +433,9 @@ export class Game {
 
         this.playerTank.updateSpriteByDirection();
 
-
-        // const x = 17;
-        // const y = 25;
-
-        // console.log(x * tileSize, y * tileSize)
-
         this.playerTank2 = new Tank(this.textures.playerTankUp1, 
                                   player2.x, 
                                   player2.y,
-                                // player1.x,
-                                // player1.y, 
                                   true, 'playerTank2');
         this.playerTank2.direction = player2.direction;
 
@@ -405,8 +450,10 @@ export class Game {
         const [x, y] = basePosition;
 
         this.base = new Base(this.textures.base, this.textures.brick, x * tileSize, y * tileSize, tileSize);
-                this.base.setDestroyedTexture(this.textures.baseDestroyed);        
-                this.app.stage.addChild(this.base.container);
+        this.base.setDestroyedTexture(this.textures.baseDestroyed);      
+        this.base.textures = this.textures;
+
+        this.app.stage.addChild(this.base.container);
     }
     
     setupControls() {
@@ -430,25 +477,94 @@ export class Game {
         this.keyupHandler = keyupHandler;
     }
     
+
+     updateLocalBulletsState(state) {
+        // console.log('state.bullets', state.bullets)
+        // Обновляем позиции пуль
+
+        state.bullets.forEach(serverBullet => {
+            const localBullet = this.bullets.find(b => b.id === serverBullet.id);
+            if (localBullet) {
+                // Интерполируем позицию для плавности
+                localBullet.sprite.x = serverBullet.x;
+                localBullet.sprite.y = serverBullet.y;
+            } else if (!serverBullet.isDestroyed) {
+                // Создаем новую пулю
+                this.createLocalBullet(serverBullet);
+            }
+        });
+        
+        // Удаляем уничтоженные пули
+        for (let i = this.bullets.length - 1; i >= 0; i--) {
+            const bullet = this.bullets[i];
+            const serverBullet = state.bullets.find(b => b.id === bullet.id);
+            
+            if (!serverBullet || serverBullet.isDestroyed) {
+                if (bullet.sprite && bullet.sprite.parent) {
+                    this.app.stage.removeChild(bullet.sprite);
+                    // this.createExplosion(bullet);
+                }
+                this.bullets.splice(i, 1);
+            }
+        }
+        
+    }
+
+     createLocalBullet(bulletData) {
+        // console.log('bulletData ', bulletData)
+        // Создаем спрайт пули
+        const bulletSprite = new PIXI.Sprite(this.textures.bullet);
+        bulletSprite.anchor.set(0.5);
+        bulletSprite.x = bulletData.x;
+        bulletSprite.y = bulletData.y;
+        
+        // Вращаем спрайт в зависимости от направления
+        switch(bulletData.direction) {
+            case 'up': bulletSprite.rotation = 0; break;
+            case 'down': bulletSprite.rotation = Math.PI; break;
+            case 'left': bulletSprite.rotation = -Math.PI / 2; break;
+            case 'right': bulletSprite.rotation = Math.PI / 2; break;
+        }
+        
+        const bullet = {
+            id: bulletData.id,
+            sprite: bulletSprite,
+            direction: bulletData.direction,
+            speed: bulletData.speed,
+            playerId: bulletData.playerId,
+            isDestroyed: false
+        };
+        
+        this.app.stage.addChild(bulletSprite);
+        this.bullets.push(bullet);
+        
+        return bullet;
+    }
+    
+    
     playerShoot() {
         if (this.player == '1') {
-            if (!this.playerTank || this.playerTank.isDestroyed) return;
+            // if (!this.playerTank || this.playerTank.isDestroyed) return;
             
-            const bullet = this.playerTank.shoot(this.textures.bullet);
-            if (bullet) {
-                this.app.stage.addChild(bullet.sprite);
-                this.bullets.push(bullet);
-            }
+            // const bullet = this.playerTank.shoot(this.textures.bullet);
+            // if (bullet) {
+            //     this.app.stage.addChild(bullet.sprite);
+            //     this.bullets.push(bullet);
+            // }
+
+            this.socket.emit('playerShoot');
         }
 
         if (this.player == '2') {
-            if (!this.playerTank2 || this.playerTank2.isDestroyed) return;
+            // if (!this.playerTank2 || this.playerTank2.isDestroyed) return;
             
-            const bullet = this.playerTank2.shoot(this.textures.bullet);
-            if (bullet) {
-                this.app.stage.addChild(bullet.sprite);
-                this.bullets.push(bullet);
-            }
+            // const bullet = this.playerTank2.shoot(this.textures.bullet);
+            // if (bullet) {
+            //     this.app.stage.addChild(bullet.sprite);
+            //     this.bullets.push(bullet);
+            // }
+            this.socket.emit('playerShoot');
+
         }
     }
     
@@ -470,7 +586,7 @@ export class Game {
         this.updateEnemies()
         
         // Обновляем снаряды
-        this.updateBullets();
+        // this.updateBullets();
     }
 
 updateEnemies() {
@@ -549,6 +665,8 @@ updateEnemies() {
         }
         
         if (this.player == '1') {
+            const prevDirection = this.playerTank;
+
             if (this.keysPressed['w'] || this.keysPressed['arrowup']) {
                 moved = this.playerTank.move('up', allObstacles);
             }
@@ -578,7 +696,7 @@ updateEnemies() {
                 this.playerTank.updateHitbox();
             }
 
-            if (moved) {
+            if (moved || this.playerTank.direction != prevDirection) {
                 const { direction, sprite } = this.playerTank;
 
                 this.socket.emit('tank-update1', { direction, x: sprite.x, y: sprite.y })
@@ -596,6 +714,8 @@ updateEnemies() {
         }
 
         if (this.player == '2') {
+            const prevDirection2 = this.playerTank2.direction;
+
             if (this.keysPressed['w'] || this.keysPressed['arrowup']) {
                 moved = this.playerTank2.move('up', allObstacles);
             }
@@ -625,7 +745,7 @@ updateEnemies() {
                 this.playerTank2.updateHitbox();
             }
 
-            if (moved) {
+            if (moved || this.playerTank2.direction != prevDirection2) {
                 const { direction, sprite } = this.playerTank2;
 
                 this.socket.emit('tank-update2', { direction, x: sprite.x, y: sprite.y })
@@ -679,11 +799,6 @@ updateEnemies() {
             if (!hitSomething && i < this.bullets.length && this.bullets[i] === bullet) {
                 this.checkBulletBoundaries(bullet, i);
             }
-
-            // TODO
-            // if (hitSomething) {
-            //     this.mapGrid[y][x]
-            // }
 
             if (bullet.isPlayer) {
                 for (let j = this.enemies.length - 1; j >= 0; j--) {
@@ -892,9 +1007,14 @@ checkBulletObstacleCollision(bullet, bulletIndex) {
         
         this.app.stage.addChild(gameOverText);
 
-        
-        // Останавливаем игру
-        this.app.ticker.stop();
+        // без этого не работае по сокету
+        setTimeout(() => {
+            // Останавливаем игру
+            this.app.ticker.stop();
+
+        }, 10); 
+
+        this.socket.emit('game-over');
     }
     
     destroy() {

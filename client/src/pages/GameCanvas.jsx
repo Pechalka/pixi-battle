@@ -29,6 +29,7 @@ const GameCanvas = () => {
                     transports: ['websocket'],
                     query: {
                                 gameId,
+                                player: p
                             },
                 });
                 gameRef.current = new Game(canvasRef.current, p, socket);

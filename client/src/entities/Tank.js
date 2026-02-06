@@ -145,6 +145,7 @@ move(direction, obstacles = []) {
     
     // Проверяем коллизии
     let collision = false;
+
     for (const obstacle of obstacles) {
         let obstacleBounds = this.getObstacleBounds(obstacle);
         if (CollisionSystem.checkRectCollision(this.hitbox, obstacleBounds)) {

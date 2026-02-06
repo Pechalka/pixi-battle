@@ -40,6 +40,10 @@ export class Base {
     getEagleBounds() {
         return this.eagleHitbox;
     }
+
+    getBounds() {
+        return this.getEagleBounds();
+    }
     
     takeDamage(damage) {
         this.health -= damage;
