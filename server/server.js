@@ -28,6 +28,8 @@ const games = {};
 const shootCooldown = 0.5 * 1000;
 
 const playerShoot = (gameId, playerId) =>{
+    if (!games[gameId]) return;
+    
     const player = games[gameId]['player' + playerId];
 
     if (!player || player.isDestroyed ) return null;

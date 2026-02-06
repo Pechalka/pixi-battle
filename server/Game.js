@@ -328,109 +328,6 @@ const checkBulletBaseCollisionSimple = (base, bullet) => {
            bulletBottom > baseTop;
 };
 
-const checkBulletCollisions = (state, bullet, i) => {
-    const results = [];
-
-    // 1. Проверяем попадание в орла
-    if (!state.base.isDestroyed) {
-        if (checkBulletBaseCollisionSimple(state.base, bullet)) {
-            state.base.isDestroyed = true;
-            state.bullets.splice(i, 1);
-            results.push({
-                type: 'base_destroyed',
-                x: state.base.x,
-                y: state.base.y
-            });
-            return results; // Пуля уничтожена, выходим
-        }
-    }
-
-    const bulletX = bullet.x;
-    const bulletY = bullet.y + 2
-    // const { tileSize } = state.mapConfig;
-    const tileSize = 16;
-
-    // 1. Определяем центральную клетку попадания
-    const centerGridX = Math.round(bulletX / tileSize);
-    // console.log("centerGridX:", centerGridX);
-    const centerGridY = Math.round(bulletY / tileSize);
-    // console.log("centerGridY:", centerGridY);
-    // 2. Определяем смещение внутри клетки (0-31)
-    const offsetX = bulletX % tileSize;
-    const offsetY = bulletY % tileSize;
-
-    // 3. Какие клетки разрушать в зависимости от направления
-    const cellsToDestroy = [];
-
-    switch (bullet.direction) {
-        case 'up':
-        case 'down':
-            // Вертикальный выстрел - разрушает 2 клетки по горизонтали
-            cellsToDestroy.push({ x: centerGridX, y: centerGridY });
-            cellsToDestroy.push({ x: centerGridX + 1, y: centerGridY });
-            break;
-
-        case 'left':
-        case 'right':
-            // Горизонтальный выстрел - разрушает 2 клетки по вертикали
-            cellsToDestroy.push({ x: centerGridX, y: centerGridY });
-            cellsToDestroy.push({ x: centerGridX, y: centerGridY + 1 });
-            break;
-    }
-
-    // 4. Фильтруем клетки вне карты
-    const validCells = cellsToDestroy.filter(({ x, y }) =>
-        x >= 0 && x <= state.mapGrid[0].length &&
-        y >= 0 && y <= state.mapGrid.length
-    );
-
-
-    for (const { x, y } of validCells) {
-        // Получаем препятствие из сетки            
-        let obstacle = null;
-        if (y >= 0 && y < state.mapGrid.length + 1 &&
-            x >= 0 && x < state.mapGrid[0].length + 1) {
-            let cell = null;
-            if (state.mapGrid[y - 1]) {
-                cell = state.mapGrid[y - 1][x - 1];
-            }
-            obstacle = cell;
-        }
-        if (!obstacle || obstacle.isDestroyed) continue;
-
-        state.bullets.splice(i, 1);
-
-        if (state.mapGrid[y - 1][x - 1].type == 'brick') {
-            if (obstacle.health == 1) {
-                state.mapGrid[y - 1][x - 1] = null;
-                results.push({
-                    y: y - 1,
-                    x: x - 1,
-                    type: 'destroyed'
-                })
-            } else {
-                state.mapGrid[y - 1][x - 1].health -= 1;
-                state.mapGrid[y - 1][x - 1].direction = bullet.direction;
-                results.push({
-                    y: y - 1,
-                    x: x - 1,
-                    type: 'damaged',
-                    direction: bullet.direction
-                })
-            }
-        }
-        if (state.mapGrid[y - 1][x - 1] && state.mapGrid[y - 1][x - 1].type === 'steel') {
-            // Сталь не разрушается, но пуля уничтожается
-            results.push({
-                y: y - 1,
-                x: x - 1,
-                type: 'steel_hit'
-            });
-        }
-    }
-
-    return results;
-}
 
 // Вспомогательная функция проверки коллизий
 const checkCollision = (a, b) => {
@@ -438,6 +335,33 @@ const checkCollision = (a, b) => {
            a.x + a.width > b.x &&
            a.y < b.y + b.height &&
            a.y + a.height > b.y;
+};
+
+// Получить границы танка (32x32 пикселя, центр в середине)
+const getTankBounds = (tankX, tankY) => {
+    return {
+        x: tankX - 16,
+        y: tankY - 16,
+        width: 32,
+        height: 32
+    };
+};
+
+// Получить границы пули (4x4 пикселя, центр в середине)
+const getBulletBounds = (bulletX, bulletY) => {
+    return {
+        x: bulletX - 2,
+        y: bulletY - 2,
+        width: 4,
+        height: 4
+    };
+};
+
+// Проверка попадания пули в танк
+const checkBulletTankCollision = (bullet, tankX, tankY) => {
+    const bulletBounds = getBulletBounds(bullet.x, bullet.y);
+    const tankBounds = getTankBounds(tankX, tankY);
+    return checkCollision(bulletBounds, tankBounds);
 };
 
 const updateEnemies = (state, io, gameId) => {
@@ -807,21 +731,316 @@ const getOppositeDirection = (direction) => {
     }
 };
 
+
+const checkBulletCollisions = (io, gameId, state, bullet, bulletIndex) => {
+    const results = [];
+
+    // 1. Проверяем попадание в орла (базу)
+    if (!state.base.isDestroyed) {
+        const baseBounds = {
+            x: state.base.x,
+            y: state.base.y,
+            width: state.base.width,
+            height: state.base.height
+        };
+        
+        const bulletBounds = getBulletBounds(bullet.x, bullet.y);
+        
+        if (checkCollision(bulletBounds, baseBounds)) {
+            state.base.isDestroyed = true;
+            state.bullets.splice(bulletIndex, 1);
+            results.push({
+                type: 'base_destroyed',
+                x: state.base.x,
+                y: state.base.y
+            });
+            return results; // Пуля уничтожена, выходим
+        }
+    }
+
+    // 2. Проверяем попадание во врагов (только для пуль игроков)
+    if (!bullet.isEnemy) {
+        for (let i = state.enemies.length - 1; i >= 0; i--) {
+            const enemy = state.enemies[i];
+            if (enemy.isDestroyed) continue;
+            
+            if (checkBulletTankCollision(bullet, enemy.x, enemy.y)) {
+                // Уничтожаем врага
+                enemy.isDestroyed = true;
+                state.bullets.splice(bulletIndex, 1);
+                
+                // Добавляем результат
+                results.push({
+                    type: 'enemy_destroyed',
+                    enemyId: enemy.id,
+                    x: enemy.x,
+                    y: enemy.y,
+                    byPlayer: bullet.playerId || 'unknown'
+                });
+                
+                // Отправляем событие
+                if (io) {
+                    io.to(gameId).emit('enemy-destroyed', {
+                        enemyId: enemy.id,
+                        byPlayer: bullet.playerId || 'unknown'
+                    });
+                }
+                
+                // Удаляем врага из массива
+                state.enemies.splice(i, 1);
+                
+                return results; // Пуля уничтожена
+            }
+        }
+    }
+
+    // 3. Проверяем попадание в игроков (только для пуль врагов)
+    if (bullet.isEnemy) {
+        // Проверяем player1
+        if (state.player1 && !state.player1.isDestroyed) {
+            if (checkBulletTankCollision(bullet, state.player1.x, state.player1.y)) {
+                state.player1.isDestroyed = true;
+                state.bullets.splice(bulletIndex, 1);
+                
+                results.push({
+                    type: 'player_destroyed',
+                    playerId: '1',
+                    byEnemy: bullet.shooterId
+                });
+                
+                if (io) {
+                    io.to(gameId).emit('player-destroyed', {
+                        playerId: '1',
+                        byEnemy: bullet.shooterId
+                    });
+                }
+                
+                return results;
+            }
+        }
+        
+        // Проверяем player2
+        if (state.player2 && !state.player2.isDestroyed) {
+            if (checkBulletTankCollision(bullet, state.player2.x, state.player2.y)) {
+                state.player2.isDestroyed = true;
+                state.bullets.splice(bulletIndex, 1);
+                
+                results.push({
+                    type: 'player_destroyed',
+                    playerId: '2',
+                    byEnemy: bullet.shooterId
+                });
+                
+                if (io) {
+                    io.to(gameId).emit('player-destroyed', {
+                        playerId: '2',
+                        byEnemy: bullet.shooterId
+                    });
+                }
+                
+                return results;
+            }
+        }
+    }
+
+    // 4. Проверяем попадание в препятствия на карте (оригинальная логика)
+    const bulletX = bullet.x;
+    const bulletY = bullet.y + 2;
+    const tileSize = 16;
+
+    const centerGridX = Math.round(bulletX / tileSize);
+    const centerGridY = Math.round(bulletY / tileSize);
+
+    const cellsToDestroy = [];
+
+    switch (bullet.direction) {
+        case 'up':
+        case 'down':
+            cellsToDestroy.push({ x: centerGridX, y: centerGridY });
+            cellsToDestroy.push({ x: centerGridX + 1, y: centerGridY });
+            break;
+        case 'left':
+        case 'right':
+            cellsToDestroy.push({ x: centerGridX, y: centerGridY });
+            cellsToDestroy.push({ x: centerGridX, y: centerGridY + 1 });
+            break;
+    }
+
+    const validCells = cellsToDestroy.filter(({ x, y }) =>
+        x >= 0 && x <= state.mapGrid[0].length &&
+        y >= 0 && y <= state.mapGrid.length
+    );
+
+    for (const { x, y } of validCells) {
+        let obstacle = null;
+        if (y >= 0 && y < state.mapGrid.length + 1 &&
+            x >= 0 && x < state.mapGrid[0].length + 1) {
+            let cell = null;
+            if (state.mapGrid[y - 1]) {
+                cell = state.mapGrid[y - 1][x - 1];
+            }
+            obstacle = cell;
+        }
+        if (!obstacle || obstacle.isDestroyed) continue;
+
+        state.bullets.splice(bulletIndex, 1);
+
+        if (state.mapGrid[y - 1][x - 1].type == 'brick') {
+            if (obstacle.health == 1) {
+                state.mapGrid[y - 1][x - 1] = null;
+                results.push({
+                    y: y - 1,
+                    x: x - 1,
+                    type: 'destroyed'
+                });
+            } else {
+                state.mapGrid[y - 1][x - 1].health -= 1;
+                state.mapGrid[y - 1][x - 1].direction = bullet.direction;
+                results.push({
+                    y: y - 1,
+                    x: x - 1,
+                    type: 'damaged',
+                    direction: bullet.direction
+                });
+            }
+        }
+        if (state.mapGrid[y - 1][x - 1] && state.mapGrid[y - 1][x - 1].type === 'steel') {
+            results.push({
+                y: y - 1,
+                x: x - 1,
+                type: 'steel_hit'
+            });
+        }
+        
+        break; // Пуля уничтожается после первого попадания
+    }
+
+    return results;
+};
+
+// Проверка столкновений танков (игроки с врагами, враги между собой)
+const checkTankCollisions = (state, frameChanges, io, gameId) => {
+    // Проверяем столкновения игроков с врагами
+    if (state.player1 && !state.player1.isDestroyed) {
+        const player1Bounds = getTankBounds(state.player1.x, state.player1.y);
+        
+        for (let i = state.enemies.length - 1; i >= 0; i--) {
+            const enemy = state.enemies[i];
+            if (enemy.isDestroyed) continue;
+            
+            const enemyBounds = getTankBounds(enemy.x, enemy.y);
+            
+            if (checkCollision(player1Bounds, enemyBounds)) {
+                // Столкновение игрока с врагом
+                state.player1.isDestroyed = true;
+                frameChanges.players.push({
+                    type: 'player_destroyed',
+                    playerId: '1',
+                    byEnemy: enemy.id,
+                    collision: true
+                });
+                
+                io.to(gameId).emit('player-destroyed', {
+                    playerId: '1',
+                    byEnemy: enemy.id,
+                    collision: true
+                });
+                
+                break;
+            }
+        }
+    }
+    
+    // Аналогично для player2
+    if (state.player2 && !state.player2.isDestroyed) {
+        const player2Bounds = getTankBounds(state.player2.x, state.player2.y);
+        
+        for (let i = state.enemies.length - 1; i >= 0; i--) {
+            const enemy = state.enemies[i];
+            if (enemy.isDestroyed) continue;
+            
+            const enemyBounds = getTankBounds(enemy.x, enemy.y);
+            
+            if (checkCollision(player2Bounds, enemyBounds)) {
+                state.player2.isDestroyed = true;
+                frameChanges.players.push({
+                    type: 'player_destroyed',
+                    playerId: '2',
+                    byEnemy: enemy.id,
+                    collision: true
+                });
+                
+                io.to(gameId).emit('player-destroyed', {
+                    playerId: '2',
+                    byEnemy: enemy.id,
+                    collision: true
+                });
+                
+                break;
+            }
+        }
+    }
+    
+    // Проверяем столкновения врагов между собой (опционально)
+    for (let i = 0; i < state.enemies.length; i++) {
+        const enemy1 = state.enemies[i];
+        if (enemy1.isDestroyed) continue;
+        
+        const bounds1 = getTankBounds(enemy1.x, enemy1.y);
+        
+        for (let j = i + 1; j < state.enemies.length; j++) {
+            const enemy2 = state.enemies[j];
+            if (enemy2.isDestroyed) continue;
+            
+            const bounds2 = getTankBounds(enemy2.x, enemy2.y);
+            
+            if (checkCollision(bounds1, bounds2)) {
+                // Враги сталкиваются - разворачиваем их
+                enemy1.direction = getOppositeDirection(enemy1.direction);
+                enemy2.direction = getOppositeDirection(enemy2.direction);
+                
+                // Отодвигаем их немного, чтобы не застряли
+                const dx = enemy1.x - enemy2.x;
+                const dy = enemy1.y - enemy2.y;
+                
+                if (Math.abs(dx) > Math.abs(dy)) {
+                    if (dx > 0) {
+                        enemy1.x += 5;
+                        enemy2.x -= 5;
+                    } else {
+                        enemy1.x -= 5;
+                        enemy2.x += 5;
+                    }
+                } else {
+                    if (dy > 0) {
+                        enemy1.y += 5;
+                        enemy2.y -= 5;
+                    } else {
+                        enemy1.y -= 5;
+                        enemy2.y += 5;
+                    }
+                }
+            }
+        }
+    }
+};
+
+
 const calculateState = (state, io, gameId) => {
     const now = Date.now();
-    const dt = (now - state.lastUpdate) / 16; // нормализованное время
+    const dt = (now - state.lastUpdate) / 16;
 
-    if (!state.obstacles || state.obstacles.length > 0) {
-        if (state.obstacles && state.obstacles.length > 0) {
-            io.to(gameId).emit('obstacles-hit', state.obstacles);
-        }
-
-        state.obstacles = []; // Очищаем ТОЛЬКО в начале кадра
-    }
+    // Очищаем изменения предыдущего кадра
+    const frameChanges = {
+        obstacles: [],
+        enemies: [], // Для событий уничтожения врагов
+        players: []  // Для событий уничтожения игроков
+    };
 
     // Обновляем врагов
     state = updateEnemies(state, io, gameId);
 
+    // Обрабатываем пули
     for (let i = state.bullets.length - 1; i >= 0; i--) {
         const bullet = state.bullets[i];
 
@@ -846,17 +1065,60 @@ const calculateState = (state, io, gameId) => {
                 break;
         }
 
-        // Проверяем коллизии с картой
-        state.obstacles = checkBulletCollisions(state, bullet, i);
+        // Проверяем все коллизии
+        const collisionResults = checkBulletCollisions(io, gameId, state, bullet, i);
+        
+        // Обрабатываем результаты коллизий
+        collisionResults.forEach(result => {
+            if (result.type === 'base_destroyed') {
+                // Обработка уничтожения базы
+                frameChanges.obstacles.push(result);
+                
+                // Отправляем событие
+                io.to(gameId).emit('base-destroyed', {
+                    x: result.x,
+                    y: result.y
+                });
+            }
+            else if (result.type === 'enemy_destroyed') {
+                // Обработка уничтожения врага
+                frameChanges.enemies.push(result);
+            }
+            else if (result.type === 'player_destroyed') {
+                // Обработка уничтожения игрока
+                frameChanges.players.push(result);
+            }
+            else {
+                // Обычные препятствия
+                frameChanges.obstacles.push(result);
+            }
+        });
 
-        // // Проверяем границы
+        // Проверяем границы
         if (checkBoundaries(bullet)) {
             state.bullets.splice(i, 1);
         }
     }
 
-    state.lastUpdate = now;
+    // Проверяем коллизии танков с врагами (столкновения)
+    checkTankCollisions(state, frameChanges, io, gameId);
 
+    // Отправляем изменения
+    if (frameChanges.obstacles.length > 0) {
+        io.to(gameId).emit('obstacles-hit', frameChanges.obstacles);
+    }
+    
+    // Отправляем обновленное состояние
+    io.to(gameId).emit('game-state', {
+        player1: state.player1,
+        player2: state.player2,
+        enemies: state.enemies,
+        bullets: state.bullets,
+        base: state.base,
+        lastUpdate: now
+    });
+
+    state.lastUpdate = now;
     return state;
 };
 

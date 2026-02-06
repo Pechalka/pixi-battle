@@ -115,19 +115,6 @@ export class Game {
     }
 
     setupSocketListeners() {
-        // this.socket.on('tank-update2', (data) => {
-        //     if (this.player === '1' && this.playerTank2) {
-        //         // Плавная интерполяция позиции
-        //         this.interpolateTankPosition(this.playerTank2, data);
-        //     }
-        // });
-        
-        // // Получаем обновления позиции танка 1 от сервера
-        // this.socket.on('tank-update1', (data) => {
-        //     if (this.player === '2' && this.playerTank) {
-        //         this.interpolateTankPosition(this.playerTank, data);
-        //     }
-        // });
 
         this.socket.on('game-state', (data) => {
             this.interpolateTankPosition(this.playerTank2, data.player2);
@@ -139,13 +126,8 @@ export class Game {
         })
 
         this.socket.on('obstacles-hit', data => {    
-            console.log('obstacles-hit ', data);
-
             data.forEach(o => {
                 if (o.type == 'base_destroyed') {
-                    // const destroyed = this.base.takeDamage(1);
-                    // console.log('destroyed ', destroyed);
-                    // this.base.isDestroyed = true;
                     this.base.replaceWithDestroyed();
                     this.gameOver();
 
@@ -172,10 +154,49 @@ export class Game {
                 }
             })
         })
+
+        this.socket.on('enemy-destroyed', data => {
+            const id = data.enemyId;
+
+            for(let i = 0; i < this.enemies.length; i++) {
+                if (this.enemies[i].id == id) {
+                    this.enemies[i].destroy();
+                    this.enemies.splice(i, 1);
+
+                }
+            }
+        })
         
+        this.socket.on('player-destroyed', (data) => {
+            // if (data.playerId === this.player) {
+            //     // Уничтожен наш танк
+            //     if (this.player === '1' && this.playerTank) {
+            //         this.playerTank.destroyTank();
+            //         this.createExplosion(this.playerTank.sprite.x, this.playerTank.sprite.y);
+            //     } else if (this.player === '2' && this.playerTank2) {
+            //         this.playerTank2.destroyTank();
+            //         this.createExplosion(this.playerTank2.sprite.x, this.playerTank2.sprite.y);
+            //     }
+            //     setTimeout(() => this.gameOver(), 1000);
+            // } else {
+                // Уничтожен другой игрок
+                const targetTank = data.playerId === '1' ? this.playerTank : this.playerTank2;
+                if (targetTank && !targetTank.isDestroyed) {
+                    targetTank.destroyTank();
+                    this.createExplosion(targetTank);
+                }
+                console.log('data ', data, this.playerTank, this.playerTank2)
+
+                if (this.playerTank.isDestroyed && this.playerTank2.isDestroyed) {
+                    setTimeout(() => this.gameOver(), 10);
+                }
+            // }
+        });
+
     }
 
     updateEnemiesFromServer(serverEnemy) {
+        // console.log('serverEnemy' , serverEnemy, this.enemies)
         // TODO: ad ids and create remove tanks
         serverEnemy.forEach((data, index) => {
             const enemyTank = this.enemies[index];
@@ -417,11 +438,13 @@ export class Game {
 
         const { enemies } = state;
         
-        enemies.forEach(({x, y, direction}) => {
+        enemies.forEach(({x, y, direction, id }) => {
             const enemy = new Tank(this.textures.enemyTankDown1, x, y, false, 'enemyTank');
             enemy.textures = this.textures;
             enemy.direction = direction;
             enemy.updateSpriteByDirection();
+
+            enemy.id = id;
             
             this.enemies.push(enemy);
             this.app.stage.addChild(enemy.sprite);
@@ -430,6 +453,7 @@ export class Game {
 
     createPlayer(state) {
         const { player1, player2 } = state;
+        console.log('state ', state);
 
         // Ставим игрока в безопасное место (рядом с низом)
         this.playerTank = new Tank(this.textures.playerTankUp1, 
@@ -493,9 +517,7 @@ export class Game {
     
 
      updateLocalBulletsState(state) {
-        // console.log('state.bullets', state.bullets)
         // Обновляем позиции пуль
-
         state.bullets.forEach(serverBullet => {
             const localBullet = this.bullets.find(b => b.id === serverBullet.id);
             if (localBullet) {
@@ -525,7 +547,6 @@ export class Game {
     }
 
      createLocalBullet(bulletData) {
-        // console.log('bulletData ', bulletData)
         // Создаем спрайт пули
         const bulletSprite = new PIXI.Sprite(this.textures.bullet);
         bulletSprite.anchor.set(0.5);
@@ -558,27 +579,11 @@ export class Game {
     
     playerShoot() {
         if (this.player == '1') {
-            // if (!this.playerTank || this.playerTank.isDestroyed) return;
-            
-            // const bullet = this.playerTank.shoot(this.textures.bullet);
-            // if (bullet) {
-            //     this.app.stage.addChild(bullet.sprite);
-            //     this.bullets.push(bullet);
-            // }
-
             this.socket.emit('playerShoot');
         }
 
         if (this.player == '2') {
-            // if (!this.playerTank2 || this.playerTank2.isDestroyed) return;
-            
-            // const bullet = this.playerTank2.shoot(this.textures.bullet);
-            // if (bullet) {
-            //     this.app.stage.addChild(bullet.sprite);
-            //     this.bullets.push(bullet);
-            // }
             this.socket.emit('playerShoot');
-
         }
     }
     
@@ -589,10 +594,10 @@ export class Game {
     }
     
     update() {
-        if (!this.playerTank || this.playerTank.isDestroyed) {
-            this.gameOver();
-            return;
-        }
+        // if (!this.playerTank || this.playerTank.isDestroyed) {
+        //     this.gameOver();
+        //     return;
+        // }
         
         // Обновляем игрока
         this.updatePlayer();
@@ -678,7 +683,7 @@ updateEnemies() {
             allObstacles.push(this.base);
         }
         
-        if (this.player == '1') {
+        if (this.player == '1' && !this.playerTank.isDestroyed) {
             const prevDirection = this.playerTank;
 
             if (this.keysPressed['w'] || this.keysPressed['arrowup']) {
@@ -722,12 +727,12 @@ updateEnemies() {
                 this.playerTank.stopAnimation();
             }
 
-            if (this.playerTank2.lastPos && this.playerTank2.lastPos.y == this.playerTank2.sprite.y && this.playerTank2.lastPos.x == this.playerTank2.sprite.x) {
+            if (this.playerTank2.sprite && this.playerTank2.lastPos && this.playerTank2.lastPos.y == this.playerTank2.sprite.y && this.playerTank2.lastPos.x == this.playerTank2.sprite.x) {
                 this.playerTank2.stopAnimation();
             }
         }
 
-        if (this.player == '2') {
+        if (this.player == '2' && !this.playerTank2.isDestroyed) {
             const prevDirection2 = this.playerTank2.direction;
 
             if (this.keysPressed['w'] || this.keysPressed['arrowup']) {
@@ -771,7 +776,7 @@ updateEnemies() {
                 this.playerTank2.stopAnimation();
             }
 
-            if (this.playerTank.lastPos && this.playerTank.lastPos.y == this.playerTank.sprite.y && this.playerTank.lastPos.x == this.playerTank.sprite.x) {
+            if (this.playerTank2.sprite && this.playerTank.lastPos && this.playerTank.lastPos.y == this.playerTank.sprite.y && this.playerTank.lastPos.x == this.playerTank.sprite.x) {
                 this.playerTank.stopAnimation();
             }
 
