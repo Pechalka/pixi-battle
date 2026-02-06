@@ -30,12 +30,12 @@ const shootCooldown = 0.5 * 1000;
 const playerShoot = (gameId, playerId) =>{
     const player = games[gameId]['player' + playerId];
 
-    // if (!player || player.isDestroyed ) return null;
+    if (!player || player.isDestroyed ) return null;
     
-    // const now = Date.now();
-    // if (now - player.lastShot < shootCooldown) return null;
+    const now = Date.now();
+    if (now - player.lastShot < shootCooldown) return null;
     
-    // player.lastShot = now;
+    player.lastShot = now;
     
     // Создаем пулю
     const bullet = {
@@ -106,8 +106,6 @@ io.on("connection", async (socket) => {
 
     socket.on('playerShoot', (data) => {
         playerShoot(gameId, player)
-
-        console.log('games ', games[gameId] )
     })
 
     socket.on('game-over', () => {
