@@ -432,7 +432,380 @@ const checkBulletCollisions = (state, bullet, i) => {
     return results;
 }
 
+// Вспомогательная функция проверки коллизий
+const checkCollision = (a, b) => {
+    return a.x < b.x + b.width &&
+           a.x + a.width > b.x &&
+           a.y < b.y + b.height &&
+           a.y + a.height > b.y;
+};
 
+const updateEnemies = (state, io, gameId) => {
+    const now = Date.now();
+    const dt = (now - state.lastUpdate) / 16;
+    
+    // Создаем массив всех препятствий для проверки коллизий
+    const allObstacles = [];
+    
+    // Добавляем кирпичи
+    for (let y = 0; y < state.mapGrid.length; y++) {
+        for (let x = 0; x < state.mapGrid[y].length; x++) {
+            const cell = state.mapGrid[y][x];
+            if (cell && !cell.isDestroyed) {
+                allObstacles.push({
+                    x: x * GAME_CONFIG.tileSize,
+                    y: y * GAME_CONFIG.tileSize,
+                    width: GAME_CONFIG.tileSize,
+                    height: GAME_CONFIG.tileSize,
+                    canDriveThrough: false
+                });
+            }
+        }
+    }
+    
+    // Добавляем сталь
+    for (let y = 0; y < state.mapGrid.length; y++) {
+        for (let x = 0; x < state.mapGrid[y].length; x++) {
+            const cell = state.mapGrid[y][x];
+            if (cell && cell.type === 'steel' && !cell.isDestroyed) {
+                allObstacles.push({
+                    x: x * GAME_CONFIG.tileSize,
+                    y: y * GAME_CONFIG.tileSize,
+                    width: GAME_CONFIG.tileSize,
+                    height: GAME_CONFIG.tileSize,
+                    canDriveThrough: false
+                });
+            }
+        }
+    }
+    
+    // Добавляем базу
+    if (!state.base.isDestroyed) {
+        allObstacles.push({
+            x: state.base.x,
+            y: state.base.y,
+            width: state.base.width,
+            height: state.base.height,
+            canDriveThrough: false
+        });
+    }
+    
+    // Добавляем игроков как препятствия
+    if (state.player1 && !state.player1.isDestroyed) {
+        allObstacles.push({
+            x: state.player1.x - 16,
+            y: state.player1.y - 16,
+            width: 32,
+            height: 32,
+            canDriveThrough: false
+        });
+    }
+    
+    if (state.player2 && !state.player2.isDestroyed) {
+        allObstacles.push({
+            x: state.player2.x - 16,
+            y: state.player2.y - 16,
+            width: 32,
+            height: 32,
+            canDriveThrough: false
+        });
+    }
+    
+    // Обновляем каждого врага
+    for (let i = state.enemies.length - 1; i >= 0; i--) {
+        const enemy = state.enemies[i];
+        
+        if (enemy.isDestroyed) {
+            state.enemies.splice(i, 1);
+            continue;
+        }
+        
+        // Проверяем текущие границы
+        const currentBounds = checkBoundaryCollision(enemy.x, enemy.y);
+        
+        // Если враг уже за границами, возвращаем его
+        if (currentBounds.left) enemy.x = 16;
+        if (currentBounds.right) enemy.x = GAME_CONFIG.gameBounds.width - 16;
+        if (currentBounds.top) enemy.y = 16;
+        if (currentBounds.bottom) enemy.y = GAME_CONFIG.gameBounds.height - 16;
+        
+        // Случайная смена направления
+        if (Math.random() < GAME_CONFIG.enemyDirectionChangeChance * dt &&
+            now - enemy.lastDirectionChange > enemy.directionChangeCooldown) {
+            
+            const directions = ['up', 'down', 'left', 'right'];
+            const newDirection = directions[Math.floor(Math.random() * directions.length)];
+            
+            // Проверяем будущую позицию
+            let futureX = enemy.x;
+            let futureY = enemy.y;
+            
+            switch(newDirection) {
+                case 'up': futureY -= enemy.speed; break;
+                case 'down': futureY += enemy.speed; break;
+                case 'left': futureX -= enemy.speed; break;
+                case 'right': futureX += enemy.speed; break;
+            }
+            
+            const futureBounds = checkBoundaryCollision(futureX, futureY);
+            const willBeOutOfBounds = futureBounds.left || futureBounds.right || 
+                                      futureBounds.top || futureBounds.bottom;
+            
+            // Меняем направление только если не выйдет за границы
+            if (!willBeOutOfBounds) {
+                enemy.direction = newDirection;
+                enemy.lastDirectionChange = now;
+            }
+        }
+        
+        // Проверяем, можно ли двигаться в текущем направлении
+        const obstaclesForThisEnemy = [
+            ...allObstacles,
+            // Добавляем других врагов как препятствия
+            ...state.enemies
+                .filter((e, idx) => idx !== i && !e.isDestroyed)
+                .map(e => ({
+                    x: e.x - 16,
+                    y: e.y - 16,
+                    width: 32,
+                    height: 32,
+                    canDriveThrough: false
+                }))
+        ];
+        
+        // Проверяем будущую позицию
+        let futureX = enemy.x;
+        let futureY = enemy.y;
+        
+        switch(enemy.direction) {
+            case 'up': futureY -= enemy.speed * dt; break;
+            case 'down': futureY += enemy.speed * dt; break;
+            case 'left': futureX -= enemy.speed * dt; break;
+            case 'right': futureX += enemy.speed * dt; break;
+        }
+        
+        // Проверяем границы будущей позиции
+        const futureBounds = checkBoundaryCollision(futureX, futureY);
+        const willBeOutOfBounds = futureBounds.left || futureBounds.right || 
+                                  futureBounds.top || futureBounds.bottom;
+        
+        // Проверяем коллизии с препятствиями для будущей позиции
+        const futureEnemy = { ...enemy, x: futureX, y: futureY };
+        const hasCollision = checkEnemyCollision(futureEnemy, obstaclesForThisEnemy);
+        
+        // Если есть коллизия или достигнута граница, меняем направление
+        if (hasCollision || willBeOutOfBounds) {
+            const directions = ['up', 'down', 'left', 'right'];
+            const oppositeDirections = {
+                'up': 'down',
+                'down': 'up',
+                'left': 'right',
+                'right': 'left'
+            };
+            
+            // Сначала пробуем противоположное направление
+            let newDirection = oppositeDirections[enemy.direction];
+            let foundValidDirection = false;
+            
+            // Проверяем противоположное направление
+            futureX = enemy.x;
+            futureY = enemy.y;
+            
+            switch(newDirection) {
+                case 'up': futureY -= enemy.speed * dt; break;
+                case 'down': futureY += enemy.speed * dt; break;
+                case 'left': futureX -= enemy.speed * dt; break;
+                case 'right': futureX += enemy.speed * dt; break;
+            }
+            
+            const testEnemy = { ...enemy, x: futureX, y: futureY };
+            const futureBoundsTest = checkBoundaryCollision(futureX, futureY);
+            const willBeOutOfBoundsTest = futureBoundsTest.left || futureBoundsTest.right || 
+                                          futureBoundsTest.top || futureBoundsTest.bottom;
+            const hasCollisionTest = checkEnemyCollision(testEnemy, obstaclesForThisEnemy);
+            
+            if (!willBeOutOfBoundsTest && !hasCollisionTest) {
+                enemy.direction = newDirection;
+                foundValidDirection = true;
+            } else {
+                // Ищем любое доступное направление
+                for (const dir of directions) {
+                    if (dir === enemy.direction) continue;
+                    
+                    futureX = enemy.x;
+                    futureY = enemy.y;
+                    
+                    switch(dir) {
+                        case 'up': futureY -= enemy.speed * dt; break;
+                        case 'down': futureY += enemy.speed * dt; break;
+                        case 'left': futureX -= enemy.speed * dt; break;
+                        case 'right': futureX += enemy.speed * dt; break;
+                    }
+                    
+                    const testEnemy2 = { ...enemy, x: futureX, y: futureY, direction: dir };
+                    const futureBoundsTest2 = checkBoundaryCollision(futureX, futureY);
+                    const willBeOutOfBoundsTest2 = futureBoundsTest2.left || futureBoundsTest2.right || 
+                                                   futureBoundsTest2.top || futureBoundsTest2.bottom;
+                    const hasCollisionTest2 = checkEnemyCollision(testEnemy2, obstaclesForThisEnemy);
+                    
+                    if (!willBeOutOfBoundsTest2 && !hasCollisionTest2) {
+                        enemy.direction = dir;
+                        foundValidDirection = true;
+                        break;
+                    }
+                }
+            }
+            
+            // Если не нашли валидного направления, стоим на месте
+            if (!foundValidDirection) {
+                // Не двигаемся в этом кадре
+                enemy.lastDirectionChange = now;
+                continue;
+            }
+            
+            enemy.lastDirectionChange = now;
+        }
+        
+        // Двигаем врага
+        switch(enemy.direction) {
+            case 'up': 
+                enemy.y -= enemy.speed * dt;
+                // Дополнительная проверка границ после движения
+                if (checkBoundaryCollision(enemy.x, enemy.y).top) {
+                    enemy.y = 16;
+                    enemy.direction = 'down';
+                }
+                break;
+            case 'down': 
+                enemy.y += enemy.speed * dt;
+                if (checkBoundaryCollision(enemy.x, enemy.y).bottom) {
+                    enemy.y = GAME_CONFIG.gameBounds.height - 16;
+                    enemy.direction = 'up';
+                }
+                break;
+            case 'left': 
+                enemy.x -= enemy.speed * dt;
+                if (checkBoundaryCollision(enemy.x, enemy.y).left) {
+                    enemy.x = 16;
+                    enemy.direction = 'right';
+                }
+                break;
+            case 'right': 
+                enemy.x += enemy.speed * dt;
+                if (checkBoundaryCollision(enemy.x, enemy.y).right) {
+                    enemy.x = GAME_CONFIG.gameBounds.width - 16;
+                    enemy.direction = 'left';
+                }
+                break;
+        }
+        
+        // Случайный выстрел
+        if (Math.random() < GAME_CONFIG.enemyShootChance * dt && 
+            enemy.canShoot && 
+            now - enemy.lastShot > enemy.shootCooldown) {
+            
+            enemy.lastShot = now;
+            
+            // Создаем пулю от врага
+            const bullet = {
+                id: `enemy_bullet_${enemy.id}_${now}`,
+                x: enemy.x,
+                y: enemy.y,
+                direction: enemy.direction,
+                speed: 5,
+                isEnemy: true,
+                shooterId: enemy.id
+            };
+            
+            // Корректируем позицию пули
+            switch(enemy.direction) {
+                case 'up': bullet.y -= 20; break;
+                case 'down': bullet.y += 20; break;
+                case 'left': bullet.x -= 20; break;
+                case 'right': bullet.x += 20; break;
+            }
+            
+            state.bullets.push(bullet);
+            
+            // Отправляем информацию о выстреле клиентам
+            io.to(gameId).emit('enemy-shot', {
+                enemyId: enemy.id,
+                bullet: bullet
+            });
+        }
+    }
+    
+    return state;
+};
+
+const checkEnemyCollision = (enemy, obstacles) => {
+    // Определяем будущую позицию врага
+    let futureX = enemy.x;
+    let futureY = enemy.y;
+    
+    switch(enemy.direction) {
+        case 'up': futureY -= enemy.speed; break;
+        case 'down': futureY += enemy.speed; break;
+        case 'left': futureX -= enemy.speed; break;
+        case 'right': futureX += enemy.speed; break;
+    }
+    
+    // Хитбокс врага (танк 2x2 клетки = 32x32 пикселя)
+    const enemyBounds = {
+        x: futureX - 16, // Центр в середине танка
+        y: futureY - 16,
+        width: 32,
+        height: 32
+    };
+    
+    // Проверяем коллизию с каждым препятствием
+    for (const obstacle of obstacles) {
+        if (obstacle.canDriveThrough || obstacle.isDestroyed) continue;
+        
+        const obstacleBounds = obstacle.getBounds ? obstacle.getBounds() : {
+            x: obstacle.x,
+            y: obstacle.y,
+            width: obstacle.width || GAME_CONFIG.tileSize,
+            height: obstacle.height || GAME_CONFIG.tileSize
+        };
+        
+        // AABB коллизия
+        if (enemyBounds.x < obstacleBounds.x + obstacleBounds.width &&
+            enemyBounds.x + enemyBounds.width > obstacleBounds.x &&
+            enemyBounds.y < obstacleBounds.y + obstacleBounds.height &&
+            enemyBounds.y + enemyBounds.height > obstacleBounds.y) {
+            return true; // Коллизия обнаружена
+        }
+    }
+    
+    return false; // Коллизий нет
+};
+
+const checkBoundaryCollision = (x, y) => {
+    // Танк имеет размер 32x32 пикселя, центр в середине
+    const tankHalfSize = 16; // 32 / 2
+    const left = x - tankHalfSize;
+    const right = x + tankHalfSize;
+    const top = y - tankHalfSize;
+    const bottom = y + tankHalfSize;
+    
+    return {
+        left: left < 0,
+        right: right > GAME_CONFIG.gameBounds.width,
+        top: top < 0,
+        bottom: bottom > GAME_CONFIG.gameBounds.height
+    };
+};
+
+const getOppositeDirection = (direction) => {
+    switch(direction) {
+        case 'up': return 'down';
+        case 'down': return 'up';
+        case 'left': return 'right';
+        case 'right': return 'left';
+        default: return direction;
+    }
+};
 
 const calculateState = (state, io, gameId) => {
     const now = Date.now();
@@ -445,6 +818,9 @@ const calculateState = (state, io, gameId) => {
 
         state.obstacles = []; // Очищаем ТОЛЬКО в начале кадра
     }
+
+    // Обновляем врагов
+    state = updateEnemies(state, io, gameId);
 
     for (let i = state.bullets.length - 1; i >= 0; i--) {
         const bullet = state.bullets[i];

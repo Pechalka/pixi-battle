@@ -130,12 +130,12 @@ export class Game {
         // });
 
         this.socket.on('game-state', (data) => {
-            // console.log('>>> ', data);
-
             this.interpolateTankPosition(this.playerTank2, data.player2);
             this.interpolateTankPosition(this.playerTank, data.player1);
 
             this.updateLocalBulletsState(data);
+
+            this.updateEnemiesFromServer(data.enemies);
         })
 
         this.socket.on('obstacles-hit', data => {    
@@ -173,6 +173,14 @@ export class Game {
             })
         })
         
+    }
+
+    updateEnemiesFromServer(serverEnemy) {
+        // TODO: ad ids and create remove tanks
+        serverEnemy.forEach((data, index) => {
+            const enemyTank = this.enemies[index];
+            if (enemyTank) enemyTank.remoteUpdate(data);
+        })
     }
 
     interpolateTankPosition(tank, data) {
