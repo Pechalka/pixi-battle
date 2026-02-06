@@ -31,14 +31,23 @@ export class AssetLoader {
             
 
 
+            enemyTankUp1: this.extractTexture(spritesheet, 8*16, 0, 15, 15),         
+            enemyTankUp2: this.extractTexture(spritesheet, 8*16 + 16, 0, 15, 15),         
+            enemyTankLeft1: this.extractTexture(spritesheet, 8*16 + 16*2, 0, 15, 15), 
+            enemyTankLeft2: this.extractTexture(spritesheet, 8*16 + 16*3, 0, 15, 15),        
+            enemyTankDown1: this.extractTexture(spritesheet, 8*16 + 16*4, 0, 15, 15),    
+            enemyTankDown2: this.extractTexture(spritesheet, 8*16 + 16*5, 0, 15, 15),     
+            enemyTankRight1: this.extractTexture(spritesheet, 8*16 + 16*6, 0, 15, 15),      
+            enemyTankRight2: this.extractTexture(spritesheet, 8*16 + 16*7, 0, 15, 15),  
+            enemyTank: this.extractTexture(spritesheet, 8*16, 0, 16, 16),  
 
 
             // playerTank2: this.extractTexture(spritesheet, 16, 0, 16, 16),             // Зеленый танк игрока 2
 
-            enemyTankBasic: this.extractTexture(spritesheet, 16*8, 0, 16, 16),    // Серый базовый враг (строка 1)
-            enemyTankFast: this.extractTexture(spritesheet, 16*8, 16, 16, 16),    // Серый быстрый враг (строка 2)
-            enemyTankPower: this.extractTexture(spritesheet, 16*8, 16*2, 16, 16), // Серый сильный враг (строка 3)
-            enemyTankArmor: this.extractTexture(spritesheet, 16*8, 16*3, 16, 16), // Серый бронированный враг (строка 4)
+            // enemyTankBasic: this.extractTexture(spritesheet, 16*8, 0, 16, 16),    // Серый базовый враг (строка 1)
+            // enemyTankFast: this.extractTexture(spritesheet, 16*8, 16, 16, 16),    // Серый быстрый враг (строка 2)
+            // enemyTankPower: this.extractTexture(spritesheet, 16*8, 16*2, 16, 16), // Серый сильный враг (строка 3)
+            // enemyTankArmor: this.extractTexture(spritesheet, 16*8, 16*3, 16, 16), // Серый бронированный враг (строка 4)
             
             // ПРЕПЯТСТВИЯ (16x16 пикселей)
             brick: this.extractTexture(spritesheet, 16*16 + 1, 0, 8, 8),            // Кирпичная стена

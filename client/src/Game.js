@@ -239,6 +239,8 @@ export class Game {
         // Создаём танк игрока
         this.createPlayer(state);
 
+        this.createEnemies(state);
+
         // Создаём базу
         this.createBase();
     }
@@ -402,13 +404,17 @@ export class Game {
         return null;
     }
 
-    createEnemies() {
+    createEnemies(state) {
         const { tileSize, enemyPositions } = this.mapConfig;
-        
-        enemyPositions.forEach(([x, y]) => {
-            const enemy = new Tank(this.textures.playerTankUp1, x * tileSize, y * tileSize, false);
-            enemy.textures = this.textures;
 
+        const { enemies } = state;
+        
+        enemies.forEach(({x, y, direction}) => {
+            const enemy = new Tank(this.textures.enemyTankDown1, x, y, false, 'enemyTank');
+            enemy.textures = this.textures;
+            enemy.direction = direction;
+            enemy.updateSpriteByDirection();
+            
             this.enemies.push(enemy);
             this.app.stage.addChild(enemy.sprite);
         });
@@ -583,7 +589,7 @@ export class Game {
         // Обновляем игрока
         this.updatePlayer();
 
-        this.updateEnemies()
+        // this.updateEnemies()
         
         // Обновляем снаряды
         // this.updateBullets();

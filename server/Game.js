@@ -3,9 +3,20 @@ const GAME_CONFIG = {
         width: 416,
         height: 416,
     },
+    enemySpeed: 5,
     tileSize: 16, // Удвоенный размер тайла
     mapWidth: 26, // Ширина в тайлах (416px)
     mapHeight: 26,
+
+    // Добавляем позиции врагов (в клетках)
+    enemyPositions: [
+        [1, 1],   // Левый верхний угол
+        [13, 1],  // Верхний центр  
+        [25, 1]   // Правый верхний угол
+    ],
+    enemySpeed: 1.5, // Скорость врагов
+    enemyShootChance: 0.01, // 1% шанс выстрела за кадр
+    enemyDirectionChangeChance: 0.02, // 2% шанс сменить направление
 };
 
 const newGame = () => {
@@ -229,11 +240,28 @@ const newGame = () => {
 
     const now = Date.now();
 
+    // Создаем врагов
+    const enemies = GAME_CONFIG.enemyPositions.map(([x, y], index) => ({
+        id: `enemy_${index}_${now}`,
+        x: x * GAME_CONFIG.tileSize,
+        y: y * GAME_CONFIG.tileSize,
+        direction: 'down', // Изначально смотрят вниз
+        speed: GAME_CONFIG.enemySpeed,
+        health: 1,
+        isDestroyed: false,
+        canShoot: true,
+        lastShot: 0,
+        shootCooldown: 2000, // 2 секунды между выстрелами
+        lastDirectionChange: now,
+        directionChangeCooldown: 1000, // 1 секунда между сменой направлений
+    }));
+
     return createMapGrid(config, {
         player1: { x: 144, y: 400, direction: 'up', lastShot: now },
         player2: { x: 272, y: 400, direction: 'up', lastShot: now },
         lastUpdate: Date.now(),
         bullets: [],
+        enemies,
         base: {
             x: 13 * 16, // 13-я клетка по X
             y: 25 * 16, // 25-я клетка по Y
@@ -242,6 +270,7 @@ const newGame = () => {
             isDestroyed: false,
             health: 1    // Орел уничтожается с одного попадания
         },
+
     });
 };
 
